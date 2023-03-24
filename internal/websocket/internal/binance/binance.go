@@ -45,6 +45,10 @@ func (wc *WebsocketClient) ConnectAndSubscribe(symbols []string) (*websocket.Con
 	return conn, nil
 }
 
+func (wc *WebsocketClient) HandleMsg(msg []byte, conn *websocket.Conn) (*types.CandlestickMsg, error) {
+	return parseCandlestickMsg(msg)
+}
+
 // Candlestick websocket message.
 //
 // Message format: https://binance-docs.github.io/apidocs/spot/en/#kline-candlestick-streams
@@ -76,7 +80,7 @@ func generateCommand(symbols []string) map[string]interface{} {
 	}
 }
 
-func (wc *WebsocketClient) ParseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
+func parseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
 	var msg RawCandlestickMsg
 	json.Unmarshal(rawMsg, &msg)
 	symbol := msg.Data.Kline["s"].(string)

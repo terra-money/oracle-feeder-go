@@ -1,10 +1,6 @@
 package websocket
 
 import (
-	"bytes"
-	"compress/gzip"
-	"encoding/json"
-	"io"
 	"log"
 	"strings"
 	"time"
@@ -18,7 +14,8 @@ import (
 
 type websocketClient interface {
 	ConnectAndSubscribe(symbols []string) (*websocket.Conn, error)
-	ParseCandlestickMsg(msg []byte) (*types.CandlestickMsg, error)
+	// HandleMsg handles websocket messages and returns a CandlestickMsg if possible
+	HandleMsg(msg []byte, conn *websocket.Conn) (*types.CandlestickMsg, error)
 }
 
 // SubscribeCandlestick subscribes to the candlestick channel.
@@ -57,34 +54,11 @@ func SubscribeCandlestick(exchange string, symbols []string, stopCh <-chan struc
 				}
 
 				if err == nil {
-					if exchange == "huobi" { // gzip decompress
-						gzreader, _ := gzip.NewReader(bytes.NewReader(rawMsg))
-						rawMsg, _ = io.ReadAll(gzreader)
-
-						jsonObj := make(map[string]any)
-						json.Unmarshal(rawMsg, &jsonObj)
-
-						if status, ok := jsonObj["status"].(string); ok {
-							if status != "ok" {
-								log.Printf("%s", string(rawMsg))
-							}
-							break
-						}
-						if timestamp, ok := jsonObj["ping"]; ok {
-							pongMsg := make(map[string]int64)
-							pongMsg["pong"] = int64(timestamp.(float64))
-							err = conn.WriteJSON(pongMsg)
-							if err != nil {
-								log.Printf("%v", err)
-							}
-							break
-						}
-					}
-
-					candlestick, err := client.ParseCandlestickMsg(rawMsg)
+					candlestick, err := client.HandleMsg(rawMsg, conn)
 					if err != nil {
 						log.Printf("%v", err)
-					} else {
+					}
+					if candlestick != nil {
 						outCh <- candlestick
 					}
 				} else {
