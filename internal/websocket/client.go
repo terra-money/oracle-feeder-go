@@ -13,6 +13,7 @@ import (
 	"github.com/terra-money/oracle-feeder-go/internal/types"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/binance"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/huobi"
+	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/kucoin"
 )
 
 type websocketClient interface {
@@ -28,7 +29,10 @@ func SubscribeCandlestick(exchange string, symbols []string, stopCh <-chan struc
 		client = binance.NewWebsocketClient()
 	case "huobi":
 		client = huobi.NewWebsocketClient()
+	case "kucoin":
+		client = kucoin.NewWebsocketClient()
 	default:
+		log.Printf("Exchange: %s not support\n", exchange)
 		client = nil
 	}
 
@@ -84,7 +88,6 @@ func SubscribeCandlestick(exchange string, symbols []string, stopCh <-chan struc
 						outCh <- candlestick
 					}
 				} else {
-					log.Printf("line 59 %v %v", err, websocket.IsCloseError(err))
 					if websocket.IsCloseError(err) {
 						// reconnect automatically
 						conn, err = client.ConnectAndSubscribe(symbols)

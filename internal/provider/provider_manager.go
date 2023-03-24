@@ -90,7 +90,7 @@ func averagePriceByCoin(prices map[string]types.PriceByPair) map[string]float64 
 	for _, priceByPair := range prices {
 		if priceByPair.Quote == "USD" {
 			coinSum[priceByPair.Base] += priceByPair.Price
-			coinSum[priceByPair.Base] += 1.0
+			coinCount[priceByPair.Base] += 1.0
 		} else {
 			quoteUSD := fmt.Sprintf("%s/USD", priceByPair.Quote)
 			if quotePrice, ok := prices[quoteUSD]; ok && quotePrice.Price > 0.0 {

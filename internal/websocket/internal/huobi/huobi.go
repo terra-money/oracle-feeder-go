@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"strings"
 
 	"github.com/gorilla/websocket"
@@ -28,20 +27,17 @@ func NewWebsocketClient() *WebsocketClient {
 func (wc *WebsocketClient) ConnectAndSubscribe(symbols []string) (*websocket.Conn, error) {
 	conn, _, err := websocket.DefaultDialer.Dial(websocketUrl, nil)
 	if err != nil {
-		log.Println("#### line 31")
 		return nil, err
 	}
 
 	for _, symbol := range symbols {
 		command := generateCommand(symbol)
 		if err := conn.WriteJSON(&command); err != nil {
-			log.Println("#### line 38")
 			return nil, err
 		}
 
 		_, compressed, err := conn.ReadMessage()
 		if err != nil {
-			log.Println("#### line 44")
 			return nil, err
 		}
 
@@ -51,12 +47,10 @@ func (wc *WebsocketClient) ConnectAndSubscribe(symbols []string) (*websocket.Con
 		var resp map[string]any
 		err = json.Unmarshal(decompressed, &resp)
 		if err != nil {
-			log.Println("#### line 63")
 			return nil, err
 		}
 
 		if status, ok := resp["status"].(string); ok && status != "ok" {
-			log.Println("#### line 68")
 			bytes, _ := json.Marshal(resp)
 			return nil, fmt.Errorf("%s", string(bytes))
 		}
