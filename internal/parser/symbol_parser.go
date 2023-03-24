@@ -7,6 +7,7 @@ import (
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/binance"
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/coingecko"
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/huobi"
+	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/kucoin"
 )
 
 // ParseSymbol parses exchange specific symbols to unified pairs.
@@ -22,6 +23,8 @@ func ParseSymbol(exhcange string, symbol string) (string, string, error) {
 		return coingecko.ParseSymbol(symbol)
 	case "huobi":
 		return huobi.ParseSymbol(symbol)
+	case "kucoin":
+		return kucoin.ParseSymbol(symbol)
 	default:
 		return parseSymbolDefault(symbol)
 	}
