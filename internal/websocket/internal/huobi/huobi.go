@@ -59,6 +59,37 @@ func (wc *WebsocketClient) ConnectAndSubscribe(symbols []string) (*websocket.Con
 	return conn, nil
 }
 
+func (wc *WebsocketClient) HandleMsg(rawMsg []byte, conn *websocket.Conn) (*types.CandlestickMsg, error) {
+	gzreader, _ := gzip.NewReader(bytes.NewReader(rawMsg))
+	rawMsg, _ = io.ReadAll(gzreader)
+
+	jsonObj := make(map[string]any)
+	json.Unmarshal(rawMsg, &jsonObj)
+
+	if status, ok := jsonObj["status"].(string); ok {
+		if status != "ok" {
+			return nil, fmt.Errorf("%s", string(rawMsg))
+		} else {
+			return nil, nil
+		}
+	}
+
+	// handle ping messages from the server
+	if timestamp, ok := jsonObj["ping"]; ok {
+		pongMsg := make(map[string]int64)
+		// send out a pong message
+		pongMsg["pong"] = int64(timestamp.(float64))
+		err := conn.WriteJSON(pongMsg)
+		if err != nil {
+			return nil, err
+		} else {
+			return nil, nil
+		}
+	}
+
+	return parseCandlestickMsg(rawMsg)
+}
+
 // Candlestick websocket message.
 //
 // Message format: https://huobiapi.github.io/docs/spot/v1/en/#market-candlestick
@@ -90,7 +121,7 @@ func generateCommand(symbol string) map[string]interface{} {
 	}
 }
 
-func (wc *WebsocketClient) ParseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
+func parseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
 	var msg RawCandlestickMsg
 	json.Unmarshal(rawMsg, &msg)
 

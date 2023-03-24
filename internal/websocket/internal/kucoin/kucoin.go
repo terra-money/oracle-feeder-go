@@ -70,6 +70,15 @@ func (wc *WebsocketClient) ConnectAndSubscribe(symbols []string) (*websocket.Con
 	return conn, nil
 }
 
+func (wc *WebsocketClient) HandleMsg(msg []byte, conn *websocket.Conn) (*types.CandlestickMsg, error) {
+	var jsonObj map[string]any
+	json.Unmarshal(msg, &jsonObj)
+	if typ, ok := jsonObj["type"]; ok && typ == "pong" {
+		return nil, nil
+	}
+	return parseCandlestickMsg(msg)
+}
+
 // Candlestick websocket message.
 //
 // Message format: https://docs.kucoin.com/#klines
@@ -129,7 +138,7 @@ func generateCommands(symbols []string) []map[string]interface{} {
 	return commands
 }
 
-func (wc *WebsocketClient) ParseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
+func parseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
 	var msg RawCandlestickMsg
 	json.Unmarshal(rawMsg, &msg)
 
