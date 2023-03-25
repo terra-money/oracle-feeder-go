@@ -1,10 +1,11 @@
 package configs
 
 var DefaultConfig = Config{
-	Port:             8532,
-	MetricsPort:      8533,
-	Sentry:           "",
-	ProviderPriority: []string{"binance", "huobi", "coingecko", "kucoin"},
+	Port:        8532,
+	MetricsPort: 8533,
+	Sentry:      "",
+	// ProviderPriority: []string{"binance", "huobi", "coingecko", "kucoin"},
+	ProviderPriority: []string{"bitfinex"},
 	Providers: map[string]ProviderConfig{
 		"binance": {
 			Symbols: []string{
@@ -523,6 +524,15 @@ var DefaultConfig = Config{
 				"ZEC-USDT",
 				"ZIL-USDC",
 				"ZIL-USDT",
+			},
+		},
+		"kraken": {
+			Symbols: []string{},
+		},
+		"bitfinex": {
+			Symbols: []string{
+				"tBTCUSD",
+				"tETHUSD",
 			},
 		},
 		"coingecko": {
