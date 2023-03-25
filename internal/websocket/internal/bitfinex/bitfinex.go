@@ -45,7 +45,7 @@ func (wc *WebsocketClient) HandleMsg(rawMsg []byte, conn *websocket.Conn) (*type
 		return parseCandlestickMsg(rawMsg)
 	}
 	if strings.HasPrefix(string(rawMsg), "{") {
-		log.Printf("### line 85 rawMsg: %v\n", string(rawMsg))
+		// log.Printf("### line 85 rawMsg: %v\n", string(rawMsg))
 		resp := make(map[string]interface{})
 		if err := json.Unmarshal(rawMsg, &resp); err != nil {
 			return nil, err
@@ -64,6 +64,9 @@ func (wc *WebsocketClient) HandleMsg(rawMsg []byte, conn *websocket.Conn) (*type
 			channels[channelId] = items[2]
 			return nil, nil
 		} else if event == "info" {
+			return nil, nil
+		} else if event == "error" {
+			log.Printf("Error msg: %v\n", string(rawMsg))
 			return nil, nil
 		}
 	}
@@ -115,6 +118,10 @@ func parseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
 	var candles []interface{}
 	items, ok := arr[1].([]interface{})
 	if !ok {
+		heartbeatMsg, ok := arr[1].(string)
+		if ok && heartbeatMsg == "hb" {
+			return nil, nil
+		}
 		return nil, fmt.Errorf("Invalid msg: %v", string(rawMsg))
 	}
 
