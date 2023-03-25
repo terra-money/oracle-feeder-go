@@ -4,8 +4,8 @@ var DefaultConfig = Config{
 	Port:        8532,
 	MetricsPort: 8533,
 	Sentry:      "",
-	// ProviderPriority: []string{"binance", "huobi", "coingecko", "kucoin"},
-	ProviderPriority: []string{"bitfinex"},
+	// ProviderPriority: []string{"binance", "huobi", "coingecko", "kucoin", "bitfinex"},
+	ProviderPriority: []string{"kraken"},
 	Providers: map[string]ProviderConfig{
 		"binance": {
 			Symbols: []string{
@@ -527,7 +527,10 @@ var DefaultConfig = Config{
 			},
 		},
 		"kraken": {
-			Symbols: []string{},
+			Symbols: []string{
+				"XBT/USD",
+				"ETH/USD",
+			},
 		},
 		"bitfinex": {
 			Symbols: []string{
