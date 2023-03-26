@@ -19,7 +19,7 @@ type Provider interface {
 
 func NewProvider(exchange string, config *configs.ProviderConfig, stopCh <-chan struct{}) (Provider, error) {
 	switch strings.ToLower(exchange) {
-	case "binance", "huobi", "kucoin":
+	case "binance", "huobi", "kucoin", "bitfinex", "kraken":
 		return internal.NewWebsocketProvider(exchange, config.Symbols, stopCh)
 	case "coingecko":
 		return coingecko.NewCoingeckoProvider(config, stopCh)

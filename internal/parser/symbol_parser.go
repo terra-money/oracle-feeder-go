@@ -5,8 +5,10 @@ import (
 	"strings"
 
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/binance"
+	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/bitfinex"
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/coingecko"
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/huobi"
+	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/kraken"
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/kucoin"
 )
 
@@ -25,6 +27,10 @@ func ParseSymbol(exhcange string, symbol string) (string, string, error) {
 		return huobi.ParseSymbol(symbol)
 	case "kucoin":
 		return kucoin.ParseSymbol(symbol)
+	case "bitfinex":
+		return bitfinex.ParseSymbol(symbol)
+	case "kraken":
+		return kraken.ParseSymbol(symbol)
 	default:
 		return parseSymbolDefault(symbol)
 	}
