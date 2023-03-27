@@ -12,6 +12,7 @@ import (
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/huobi"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/kraken"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/kucoin"
+	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/okx"
 )
 
 type websocketClient interface {
@@ -34,6 +35,8 @@ func SubscribeCandlestick(exchange string, symbols []string, stopCh <-chan struc
 		client = bitfinex.NewWebsocketClient()
 	case "kraken":
 		client = kraken.NewWebsocketClient()
+	case "okx":
+		client = okx.NewWebsocketClient()
 	default:
 		log.Printf("Exchange: %s not support\n", exchange)
 		client = nil
