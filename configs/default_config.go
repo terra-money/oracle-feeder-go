@@ -4,7 +4,7 @@ var DefaultConfig = Config{
 	Port:             8532,
 	MetricsPort:      8533,
 	Sentry:           "",
-	ProviderPriority: []string{"binance", "huobi", "coingecko", "kucoin", "bitfinex", "kraken", "okx"},
+	ProviderPriority: []string{"binance", "huobi", "coingecko", "kucoin", "bitfinex", "kraken", "okx", "osmosis"},
 	Providers: map[string]ProviderConfig{
 		"binance": {
 			Symbols: []string{
@@ -1010,6 +1010,23 @@ var DefaultConfig = Config{
 				"juno-network",
 				"stargaze",
 				"akash-network",
+			},
+		},
+		"osmosis": {
+			Interval: 6,
+			Symbols: []string{
+				"ATOM/USDC",
+				"AKT/USDC",
+				"JUNO/USDC",
+				"SCRT/USDC",
+				"STARS/USDC",
+				"OSMO/USDC",
+				"INJ/USDC",
+				"LUNA/USDC",
+				"KAVA/USDC",
+				"LINK/USDC",
+				"DOT/USDC",
+				"LUNC/USDC",
 			},
 		},
 	},
