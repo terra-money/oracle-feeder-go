@@ -6,7 +6,6 @@ import (
 
 	"github.com/terra-money/oracle-feeder-go/configs"
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
-	"github.com/terra-money/oracle-feeder-go/internal/provider/internal/coingecko"
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal/osmosis"
 	"github.com/terra-money/oracle-feeder-go/pkg/types"
 )
@@ -22,8 +21,8 @@ func NewProvider(exchange string, config *configs.ProviderConfig, stopCh <-chan 
 	switch strings.ToLower(exchange) {
 	case "binance", "huobi", "kucoin", "bitfinex", "kraken", "okx":
 		return internal.NewWebsocketProvider(exchange, config.Symbols, stopCh)
-	case "coingecko":
-		return coingecko.NewCoingeckoProvider(config, stopCh)
+	case "coingecko", "exchangerate", "fer", "frankfurter":
+		return internal.NewRESTfulProvider(exchange, config.Symbols, config.Interval, config.Timeout, stopCh)
 	case "osmosis":
 		return osmosis.NewOsmosisProvider(config, stopCh)
 	default:

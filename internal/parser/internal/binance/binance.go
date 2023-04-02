@@ -9,13 +9,13 @@ import (
 
 func ParseSymbol(symbol string) (string, string, error) {
 	symbol = strings.ToUpper(symbol)
-	for coin := range configs.FiatCoins {
+	for _, coin := range configs.FiatCoins {
 		if strings.HasSuffix(symbol, coin) {
 			base := strings.TrimSuffix(symbol, coin)
 			return base, coin, nil
 		}
 	}
-	for coin := range configs.StableCoins {
+	for _, coin := range configs.StableCoins {
 		if strings.HasSuffix(symbol, coin) {
 			base := strings.TrimSuffix(symbol, coin)
 			return base, coin, nil
