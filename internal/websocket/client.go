@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -38,8 +39,7 @@ func SubscribeCandlestick(exchange string, symbols []string, stopCh <-chan struc
 	case "okx":
 		client = okx.NewWebsocketClient()
 	default:
-		log.Printf("Exchange: %s not support\n", exchange)
-		client = nil
+		return nil, fmt.Errorf("unknown websocket exchange %s", exchange)
 	}
 
 	conn, err := client.ConnectAndSubscribe(symbols)

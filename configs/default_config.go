@@ -4,7 +4,7 @@ var DefaultConfig = Config{
 	Port:             8532,
 	MetricsPort:      8533,
 	Sentry:           "",
-	ProviderPriority: []string{"binance", "huobi", "coingecko", "kucoin", "bitfinex", "kraken", "okx", "osmosis"},
+	ProviderPriority: []string{"binance", "huobi", "coingecko", "kucoin", "bitfinex", "kraken", "okx", "osmosis", "exchangerate", "frankfurter", "fer"},
 	Providers: map[string]ProviderConfig{
 		"binance": {
 			Symbols: []string{
@@ -910,6 +910,7 @@ var DefaultConfig = Config{
 		},
 		"coingecko": {
 			Interval: 6,
+			Timeout:  5,
 			Symbols: []string{
 				"bitcoin",
 				"ethereum",
@@ -1028,6 +1029,21 @@ var DefaultConfig = Config{
 				"DOT/USDC",
 				"LUNC/USDC",
 			},
+		},
+		"exchangerate": {
+			Interval: 30,
+			Timeout:  5,
+			Symbols:  FiatCoins,
+		},
+		"frankfurter": {
+			Interval: 30,
+			Timeout:  5,
+			Symbols:  FiatCoins,
+		},
+		"fer": {
+			Interval: 30,
+			Timeout:  5,
+			Symbols:  FiatCoins,
 		},
 	},
 }
