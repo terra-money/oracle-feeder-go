@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"sync"
 
 	internal_types "github.com/terra-money/oracle-feeder-go/internal/types"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket"
@@ -10,6 +11,7 @@ import (
 
 type WebsocketProvider struct {
 	priceBySymbol map[string]internal_types.PriceBySymbol
+	mu            *sync.Mutex
 }
 
 func NewWebsocketProvider(exchange string, symbols []string, stopCh <-chan struct{}) (*WebsocketProvider, error) {
@@ -17,8 +19,11 @@ func NewWebsocketProvider(exchange string, symbols []string, stopCh <-chan struc
 	if err != nil {
 		return nil, err
 	}
+
+	mu := sync.Mutex{}
 	provider := &WebsocketProvider{
 		priceBySymbol: make(map[string]internal_types.PriceBySymbol),
+		mu:            &mu,
 	}
 
 	go func() {
@@ -31,7 +36,9 @@ func NewWebsocketProvider(exchange string, symbols []string, stopCh <-chan struc
 				Price:     msg.Vwap,
 				Timestamp: msg.Timestamp,
 			}
+			mu.Lock()
 			provider.priceBySymbol[msg.Symbol] = price
+			mu.Unlock()
 		}
 	}()
 	return provider, nil
@@ -39,6 +46,8 @@ func NewWebsocketProvider(exchange string, symbols []string, stopCh <-chan struc
 
 func (p *WebsocketProvider) GetPrices() map[string]types.PriceByPair {
 	result := make(map[string]types.PriceByPair)
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	for _, price := range p.priceBySymbol {
 		pair := fmt.Sprintf("%s/%s", price.Base, price.Quote)
 		result[pair] = types.PriceByPair{

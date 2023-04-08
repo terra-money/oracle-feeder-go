@@ -19,9 +19,9 @@ type Provider interface {
 
 func NewProvider(exchange string, config *configs.ProviderConfig, stopCh <-chan struct{}) (Provider, error) {
 	switch strings.ToLower(exchange) {
-	case "binance", "huobi", "kucoin", "bitfinex", "kraken", "okx":
+	case "binance", "huobi", "kucoin", "bitfinex", "kraken", "okx", "coinbase":
 		return internal.NewWebsocketProvider(exchange, config.Symbols, stopCh)
-	case "coingecko", "exchangerate", "fer", "frankfurter":
+	case "coingecko", "bitstamp", "bittrex", "exchangerate", "fer", "frankfurter":
 		return internal.NewRESTfulProvider(exchange, config.Symbols, config.Interval, config.Timeout, stopCh)
 	case "osmosis":
 		return osmosis.NewOsmosisProvider(config, stopCh)

@@ -10,6 +10,7 @@ import (
 	"github.com/terra-money/oracle-feeder-go/internal/types"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/binance"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/bitfinex"
+	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/coinbase"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/huobi"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/kraken"
 	"github.com/terra-money/oracle-feeder-go/internal/websocket/internal/kucoin"
@@ -28,6 +29,8 @@ func SubscribeCandlestick(exchange string, symbols []string, stopCh <-chan struc
 	switch strings.ToLower(exchange) {
 	case "binance":
 		client = binance.NewWebsocketClient()
+	case "coinbase":
+		client = coinbase.NewWebsocketClient()
 	case "huobi":
 		client = huobi.NewWebsocketClient()
 	case "kucoin":
