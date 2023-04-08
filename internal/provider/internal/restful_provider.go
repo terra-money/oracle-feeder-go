@@ -2,6 +2,7 @@ package internal
 
 import (
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/terra-money/oracle-feeder-go/internal/restful"
@@ -12,6 +13,7 @@ import (
 
 type RESTfulProvider struct {
 	priceBySymbol map[string]internal_types.PriceBySymbol
+	mu            *sync.Mutex
 }
 
 func NewRESTfulProvider(exchange string, symbols []string, interval int, timeout int, stopCh <-chan struct{}) (*RESTfulProvider, error) {
@@ -20,17 +22,20 @@ func NewRESTfulProvider(exchange string, symbols []string, interval int, timeout
 		return nil, err
 	}
 
+	mu := sync.Mutex{}
 	provider := &RESTfulProvider{
 		priceBySymbol: make(map[string]internal_types.PriceBySymbol),
+		mu:            &mu,
 	}
 
 	go func() {
 		ticker := time.NewTicker(time.Duration(interval) * time.Second)
 		prices, err := client.FetchAndParse(symbols, timeout)
-		if err != nil {
-			return
+		if err == nil {
+			mu.Lock()
+			maps.Copy(provider.priceBySymbol, prices)
+			mu.Unlock()
 		}
-		maps.Copy(provider.priceBySymbol, prices)
 		for {
 			select {
 			case <-stopCh:
@@ -39,7 +44,9 @@ func NewRESTfulProvider(exchange string, symbols []string, interval int, timeout
 			case <-ticker.C:
 				prices, err := client.FetchAndParse(symbols, timeout)
 				if err == nil {
+					mu.Lock()
 					maps.Copy(provider.priceBySymbol, prices)
+					mu.Unlock()
 				}
 			}
 		}
@@ -50,6 +57,8 @@ func NewRESTfulProvider(exchange string, symbols []string, interval int, timeout
 
 func (p *RESTfulProvider) GetPrices() map[string]types.PriceByPair {
 	result := make(map[string]types.PriceByPair)
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	for _, price := range p.priceBySymbol {
 		pair := fmt.Sprintf("%s/%s", price.Base, price.Quote)
 		result[pair] = types.PriceByPair{
