@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/terra-money/oracle-feeder-go/configs"
@@ -24,6 +25,7 @@ type OsmosisEndpoint struct {
 type OsmosisProvider struct {
 	priceBySymbol map[string]internal_types.PriceBySymbol
 	config        *configs.ProviderConfig
+	mu            *sync.Mutex
 }
 
 var endpoints []OsmosisEndpoint
@@ -50,9 +52,11 @@ var whiteListPoolIds = map[string]string{
 var idToSymbols = make(map[string]string)
 
 func NewOsmosisProvider(config *configs.ProviderConfig, stopCh <-chan struct{}) (*OsmosisProvider, error) {
+	mu := sync.Mutex{}
 	provider := &OsmosisProvider{
 		priceBySymbol: make(map[string]internal_types.PriceBySymbol),
 		config:        config,
+		mu:            &mu,
 	}
 
 	endpoints = append(endpoints, OsmosisEndpoint{
@@ -103,6 +107,8 @@ func rotateUrl() (string, error) {
 
 func (p *OsmosisProvider) GetPrices() map[string]types.PriceByPair {
 	result := make(map[string]types.PriceByPair)
+	p.mu.Lock()
+	defer p.mu.Unlock()
 	for _, price := range p.priceBySymbol {
 		pair := fmt.Sprintf("%s/%s", price.Base, price.Quote)
 		result[pair] = types.PriceByPair{
@@ -124,7 +130,9 @@ func (p *OsmosisProvider) fetchAndParse() {
 		if err != nil {
 			log.Printf("%v", err)
 		} else {
+			p.mu.Lock()
 			maps.Copy(p.priceBySymbol, prices)
+			p.mu.Unlock()
 		}
 	}
 }
