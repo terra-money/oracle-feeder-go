@@ -1,6 +1,6 @@
-package configs
+package config
 
-var DefaultConfig = Config{
+var DefaultPriceServerConfig = Config{
 	Port:             8532,
 	MetricsPort:      8533,
 	Sentry:           "",
@@ -1420,5 +1420,13 @@ var DefaultConfig = Config{
 			Timeout:  5,
 			Symbols:  FiatCoins,
 		},
+	},
+}
+
+var DefaultAllianceConfig = AllianceConfig{
+	GRPCUrls: []string{
+		"migaloo-grpc.polkachu.com:20790",
+		"kujira-grpc.polkachu.com:11890",
+		"carbon-grpc.lavenderfive.com:443",
 	},
 }

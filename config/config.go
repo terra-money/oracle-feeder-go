@@ -1,4 +1,8 @@
-package configs
+package config
+
+import (
+	"cosmossdk.io/math"
+)
 
 type Config struct {
 	Port             int                       `json:"port,omitempty"`
@@ -12,4 +16,14 @@ type ProviderConfig struct {
 	Symbols  []string `json:"symbols,omitempty"`
 	Interval int      `json:"interval,omitempty"` // in seconds
 	Timeout  int      `json:"timeout,omitempty"`
+}
+
+type AllianceConfig struct {
+	GRPCUrls []string  `json:"lcdList,omitempty"`
+	LSTSData []LSTData `json:"lstData,omitempty"`
+}
+
+type LSTData struct {
+	IBCDenom     string         `json:"ibcDenom,omitempty"`
+	RebaseFactor math.LegacyDec `json:"rebaseFactor,omitempty"`
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/terra-money/oracle-feeder-go/configs"
+	"github.com/terra-money/oracle-feeder-go/config"
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal/osmosis"
 	"github.com/terra-money/oracle-feeder-go/pkg/types"
@@ -17,7 +17,7 @@ type Provider interface {
 	GetPrices() map[string]types.PriceByPair
 }
 
-func NewProvider(exchange string, config *configs.ProviderConfig, stopCh <-chan struct{}) (Provider, error) {
+func NewProvider(exchange string, config *config.ProviderConfig, stopCh <-chan struct{}) (Provider, error) {
 	switch strings.ToLower(exchange) {
 	case "binance", "bitfinex", "bybit", "coinbase", "huobi", "kraken", "kucoin", "okx":
 		return internal.NewWebsocketProvider(exchange, config.Symbols, stopCh)
