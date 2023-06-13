@@ -49,8 +49,8 @@ func (m *ProviderManager) GetPrices() *types.PricesResponse {
 		})
 	}
 	resp := &types.PricesResponse{
-		Timestap: time.Now().UTC().Format(time.RFC3339),
-		Prices:   pricesOfCoins,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Prices:    pricesOfCoins,
 	}
 
 	return resp
