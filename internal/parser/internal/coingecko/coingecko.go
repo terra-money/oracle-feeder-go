@@ -106,6 +106,8 @@ var COIN_GECKO_MAPPING = map[string]string{
 	"juno-network":              "JUNO",
 	"stargaze":                  "STARS",
 	"akash-network":             "AKT",
+	"white-whale":               "WHALE", // White Whale chain
+	"switcheo":                  "SWTH",  // Carbon chain
 }
 
 func ParseSymbol(symbol string) (string, string, error) {

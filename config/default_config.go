@@ -1,5 +1,9 @@
 package config
 
+import (
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
+)
+
 var DefaultPriceServerConfig = Config{
 	Port:             8532,
 	MetricsPort:      8533,
@@ -1082,6 +1086,8 @@ var DefaultPriceServerConfig = Config{
 				"juno-network",
 				"stargaze",
 				"akash-network",
+				"white-whale",
+				"switcheo",
 			},
 		},
 		"osmosis": {
@@ -1428,5 +1434,25 @@ var DefaultAllianceConfig = AllianceConfig{
 		"migaloo-grpc.polkachu.com:20790",
 		"kujira-grpc.polkachu.com:11890",
 		"carbon-grpc.lavenderfive.com:443",
+	},
+	LSTSData: []LSTData{
+		// Whale
+		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
+			IBCDenom:     "ibc/05238E98A143496C8AF2B6067BABC84503909ECE9E45FBCBAC2CBA5C889FD82A",
+			RebaseFactor: sdktypes.MustNewDecFromStr("1.178655688356438636"),
+		},
+		{ // BoneLuna https://chainsco.pe/terra2/address/terra17aj4ty4sz4yhgm08na8drc0v03v2jwr3waxcqrwhajj729zhl7zqnpc0ml
+			IBCDenom:     "ibc/40C29143BF4153B365089E40E437B7AA819672646C45BB0A5F1E10915A0B6708",
+			RebaseFactor: sdktypes.MustNewDecFromStr("1.066790970929921282"),
+		},
+		// Carbon
+		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
+			IBCDenom:     "ibc/62A3870B9804FC3A92EAAA1F0F3F07E089DBF76CC521466CA33F5AAA8AD42290",
+			RebaseFactor: sdktypes.MustNewDecFromStr("1.178655688356438636"),
+		},
+		{ // Stride stLuna https://app.stride.zone/
+			IBCDenom:     "ibc/FBEE20115530F474F8BBE1460DA85437C3FBBFAF4A5DEBD71CA6B9C40559A161",
+			RebaseFactor: sdktypes.MustNewDecFromStr("1.057000000000000000"),
+		},
 	},
 }

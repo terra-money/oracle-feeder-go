@@ -1,7 +1,7 @@
 package config
 
 import (
-	"cosmossdk.io/math"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 )
 
 type Config struct {
@@ -24,6 +24,6 @@ type AllianceConfig struct {
 }
 
 type LSTData struct {
-	IBCDenom     string         `json:"ibcDenom,omitempty"`
-	RebaseFactor math.LegacyDec `json:"rebaseFactor,omitempty"`
+	IBCDenom     string       `json:"ibcDenom,omitempty"`
+	RebaseFactor sdktypes.Dec `json:"rebaseFactor,omitempty"`
 }
