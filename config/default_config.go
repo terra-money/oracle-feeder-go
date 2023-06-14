@@ -1433,7 +1433,7 @@ var DefaultAllianceConfig = AllianceConfig{
 	GRPCUrls: []string{
 		"migaloo-grpc.polkachu.com:20790",
 		"kujira-grpc.polkachu.com:11890",
-		"carbon-grpc.lavenderfive.com:443",
+		"query-grpc.carbon.network:443",
 	},
 	LSTSData: []LSTData{
 		// Whale

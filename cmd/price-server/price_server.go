@@ -2,15 +2,21 @@ package main
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/terra-money/oracle-feeder-go/config"
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
 )
 
 func main() {
+	err := godotenv.Load()
+	if err != nil {
+		log.Fatal("Error loading .env file:", err)
+	}
 	ctx := context.Background()
 
 	stopCh := make(chan struct{})
@@ -33,11 +39,13 @@ func main() {
 		}
 		c.JSON(http.StatusOK, allianceProtocol)
 	})
-	if os.Getenv("PORT") == "" {
+	if os.Getenv("PRICE_SERVER_PORT") == "" {
 		os.Setenv("PORT", "8532") // use 8532 by default
+	} else {
+		os.Setenv("PORT", os.Getenv("PRICE_SERVER_PORT"))
 	}
 
-	err := r.Run()
+	err = r.Run()
 	if err != nil {
 		panic(err)
 	}
