@@ -139,7 +139,6 @@ func (p *OsmosisProvider) fetchAndParse() {
 
 func fetchPrices(symbols []string) ([]interface{}, error) {
 	url, err := rotateUrl()
-	// fmt.Printf("url: %s\n", url)
 	if err != nil {
 		return nil, err
 	}
@@ -233,6 +232,5 @@ func parseJSON(msg []interface{}) (map[string]internal_types.PriceBySymbol, erro
 			prices[pairPrice.Symbol] = pairPrice
 		}
 	}
-	// fmt.Printf("osmoPrice: %v prices: %v\n", osmoPrice, prices)
 	return prices, nil
 }

@@ -64,7 +64,10 @@ func (wc *WebsocketClient) HandleMsg(rawMsg []byte, conn *websocket.Conn) (*type
 	rawMsg, _ = io.ReadAll(gzreader)
 
 	jsonObj := make(map[string]any)
-	json.Unmarshal(rawMsg, &jsonObj)
+	err := json.Unmarshal(rawMsg, &jsonObj)
+	if err != nil {
+		return nil, err
+	}
 
 	if status, ok := jsonObj["status"].(string); ok {
 		if status != "ok" {
@@ -123,8 +126,10 @@ func generateCommand(symbol string) map[string]interface{} {
 
 func parseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
 	var msg RawCandlestickMsg
-	json.Unmarshal(rawMsg, &msg)
-
+	err := json.Unmarshal(rawMsg, &msg)
+	if err != nil {
+		return nil, err
+	}
 	arr := strings.Split(msg.Channel, ".")
 	if len(arr) != 4 {
 		return nil, fmt.Errorf("not a candlestick %s", string(rawMsg))

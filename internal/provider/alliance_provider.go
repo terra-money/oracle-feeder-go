@@ -6,17 +6,19 @@ import (
 	"strconv"
 	"strings"
 
+	alliancetypes "github.com/terra-money/alliance/x/alliance/types"
+	"github.com/terra-money/oracle-feeder-go/config"
+	types "github.com/terra-money/oracle-feeder-go/internal/types"
+	pricetypes "github.com/terra-money/oracle-feeder-go/pkg/types"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
+
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	"github.com/cosmos/cosmos-sdk/codec"
 	sdk "github.com/cosmos/cosmos-sdk/codec/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	mintypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
-	alliancetypes "github.com/terra-money/alliance/x/alliance/types"
-	"github.com/terra-money/oracle-feeder-go/config"
-	types "github.com/terra-money/oracle-feeder-go/internal/types"
-	pricetypes "github.com/terra-money/oracle-feeder-go/pkg/types"
-	"google.golang.org/grpc"
 )
 
 type allianceProvider struct {
@@ -35,13 +37,13 @@ func NewAllianceProvider(config *config.AllianceConfig, providerManager *Provide
 func (p *allianceProvider) getRPCConnection(nodeUrl string, interfaceRegistry sdk.InterfaceRegistry) (*grpc.ClientConn, error) {
 	return grpc.Dial(
 		nodeUrl,
-		grpc.WithInsecure(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec())),
 	)
 }
 
 func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (protocolsInfo []types.ProtocolInfo, err error) {
-	// Query the all prices at the beggining
+	// Query the all prices at the beginning
 	// to cache the data and avoid querying
 	// the prices each time we query the protocols info.
 	pricesRes := p.providerManager.GetPrices(ctx)
@@ -143,12 +145,16 @@ func parseAlliances(
 
 	for _, lstData := range lstsData {
 		for _, alliance := range alliances {
+			// When an alliance is whitelisted in lstData which
+			// means that it is an alliance with an LSD of luna
+			// so it must be included to the lunaAlliances.
 			if strings.EqualFold(lstData.IBCDenom, alliance.Denom) {
 				annualTakeRate := calculateAnnualizedTakeRate(allianceParams, alliance)
+				normalizedRewardWeight := calculateNormalizedRewardWeight(allianceParams, alliances, alliance)
 
 				lunaAlliances = append(lunaAlliances, types.NewLunaAlliance(
 					alliance.Denom,
-					alliance.RewardWeight,
+					normalizedRewardWeight,
 					annualTakeRate,
 					alliance.TotalTokens,
 					lstData.RebaseFactor,
@@ -184,4 +190,36 @@ func calculateAnnualizedTakeRate(
 			OneDec().
 			Sub(alliance.TakeRate).
 			Power(uint64(takeRatePerYear)))
+}
+
+func calculateNormalizedRewardWeight(
+	params alliancetypes.Params,
+	alliances []alliancetypes.AllianceAsset,
+	alliance alliancetypes.AllianceAsset,
+) sdktypes.Dec {
+	// If the alliance is not initialized users are not
+	// receiving rewards so NormalizedRewardWeight rate is zero (right now).
+	if !alliance.IsInitialized {
+		return sdktypes.ZeroDec()
+	}
+
+	// When TakeRateClaimInterval is zero it means that users are not
+	// receiving any rewards so NormalizedRewardWeight is zero (right now).
+	if params.TakeRateClaimInterval == 0 {
+		return sdktypes.ZeroDec()
+	}
+
+	// The native token always has 1 of reward weight that's why the
+	// initializedAlliancesRewardWeight is initialized with 1.
+	initializedAlliancesRewardWeight := sdktypes.OneDec()
+	for _, alliance := range alliances {
+		// If an alliance is not initialized it means that
+		// rewards are not distributed to that alliance so
+		// it has a reward weight of zero.
+		if alliance.IsInitialized {
+			initializedAlliancesRewardWeight = initializedAlliancesRewardWeight.Add(alliance.RewardWeight)
+		}
+	}
+
+	return alliance.RewardWeight.Quo(initializedAlliancesRewardWeight)
 }

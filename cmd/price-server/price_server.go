@@ -37,6 +37,10 @@ func main() {
 		os.Setenv("PORT", "8532") // use 8532 by default
 	}
 
-	r.Run()
+	err := r.Run()
+	if err != nil {
+		panic(err)
+	}
+
 	close(stopCh)
 }
