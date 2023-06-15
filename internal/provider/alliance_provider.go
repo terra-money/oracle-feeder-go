@@ -11,6 +11,10 @@ import (
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
 	pricetypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 	"google.golang.org/grpc"
+
+	"crypto/tls"
+
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
@@ -35,11 +39,19 @@ func NewAllianceProvider(config *config.AllianceConfig, providerManager *Provide
 }
 
 func (p *allianceProvider) getRPCConnection(nodeUrl string, interfaceRegistry sdk.InterfaceRegistry) (*grpc.ClientConn, error) {
+	var authCredentials = grpc.WithTransportCredentials(insecure.NewCredentials())
+
+	if strings.Contains(nodeUrl, "carbon") {
+		authCredentials = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
+	}
+
 	return grpc.Dial(
 		nodeUrl,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec())),
-	)
+		authCredentials,
+		grpc.WithDefaultCallOptions(
+			grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec()),
+			grpc.MaxCallRecvMsgSize(1024*1024*16), // 16MB
+		))
 }
 
 func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (protocolsInfo []types.ProtocolInfo, err error) {

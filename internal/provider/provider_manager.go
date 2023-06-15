@@ -21,9 +21,10 @@ func NewProviderManager(config *config.Config, stopCh <-chan struct{}) *Provider
 		providerConfig := config.Providers[exchange]
 		provider, err := NewProvider(exchange, &providerConfig, stopCh)
 		if err != nil {
-			panic(err)
+			fmt.Printf("Exchange %s connection ERROR %s \n", exchange, err)
+		} else {
+			providers[exchange] = provider
 		}
-		providers[exchange] = provider
 	}
 	return &ProviderManager{
 		config:    config,

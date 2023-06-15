@@ -8,7 +8,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
@@ -22,35 +21,24 @@ func main() {
 	if err != nil {
 		log.Fatal("Error loading .env file:", err)
 	}
+
 	ctx := context.Background()
 	provider := provider.NewTransactionsProvider()
 
-	// Create a channel that will receive a value at the specified interval
-	ticker := time.Tick(5 * time.Second)
+	res, err := requestAlliancesData()
+	if err != nil {
+		log.Fatal("ERROR requesting alliances data", err)
+	}
+	msg, err := provider.ParseAlliancesTransaction(res)
+	if err != nil {
+		log.Fatal("ERROR parsing alliances data", err)
+	}
+	txHash, err := provider.SubmitAlliancesTransaction(ctx, []sdk.Msg{msg})
+	if err != nil {
+		log.Fatal("ERROR submittin alliances data on chain ", err)
+	}
 
-	// Start a goroutine to perform the action
-	go func() {
-		for range ticker {
-			res, err := requestAlliancesData()
-			if err != nil {
-				panic(err)
-			}
-			msg, err := provider.ParseAlliancesTransaction(res)
-			if err != nil {
-				panic(err)
-			}
-			txHash, err := provider.SubmitAlliancesTransaction(ctx, []sdk.Msg{msg})
-			if err != nil {
-				panic(err)
-			}
-
-			fmt.Printf("Transaction Submitted successfully txHash: %d \n", txHash)
-		}
-	}()
-
-	// Wait for user input to exit the program
-	fmt.Println("Press Enter to stop...")
-	fmt.Scanln()
+	fmt.Printf("Transaction Submitted successfully txHash: %d \n", txHash)
 }
 
 func requestAlliancesData() (res []types.ProtocolInfo, err error) {
