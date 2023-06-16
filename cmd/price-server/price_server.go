@@ -32,12 +32,12 @@ func main() {
 		c.JSON(http.StatusOK, prices)
 	})
 	r.GET("/alliance/protocol", func(c *gin.Context) {
-		allianceProtocol, err := allianceProvider.GetProtocolsInfo(ctx)
+		allianceProtocolRes, err := allianceProvider.GetProtocolsInfo(ctx)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, err)
 			return
 		}
-		c.JSON(http.StatusOK, allianceProtocol)
+		c.JSON(http.StatusOK, allianceProtocolRes)
 	})
 	if os.Getenv("PRICE_SERVER_PORT") == "" {
 		os.Setenv("PORT", "8532") // use 8532 by default

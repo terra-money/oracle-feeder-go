@@ -1,10 +1,20 @@
 package types
 
 import (
-	"cosmossdk.io/math"
-
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
+
+type AllianceProtocolRes struct {
+	LunaPrice     sdk.Dec        `json:"luna_price,omitempty"`
+	ProtocolsInfo []ProtocolInfo `json:"protocols_info,omitempty"`
+}
+
+func DefaultAllianceProtocolRes() AllianceProtocolRes {
+	return AllianceProtocolRes{
+		LunaPrice:     sdk.ZeroDec(),
+		ProtocolsInfo: []ProtocolInfo{},
+	}
+}
 
 type ProtocolInfo struct {
 	ChainId       string         `json:"chain_id,omitempty"`
@@ -43,35 +53,25 @@ func NewNativeToken(
 }
 
 type LunaAlliance struct {
-	IBCDenom               string   `json:"ibc_denom,omitempty"`
-	NormalizedRewardWeight sdk.Dec  `json:"normalized_reward_weight,omitempty"`
-	AnnualTakeRate         sdk.Dec  `json:"annual_take_rate,omitempty"`
-	TotalStaked            math.Int `json:"total_staked,omitempty"`
-	RebaseFactor           sdk.Dec  `json:"rebase_factor,omitempty"`
+	IBCDenom               string  `json:"ibc_denom,omitempty"`
+	NormalizedRewardWeight sdk.Dec `json:"normalized_reward_weight,omitempty"`
+	AnnualTakeRate         sdk.Dec `json:"annual_take_rate,omitempty"`
+	TotalLSDStaked         sdk.Dec `json:"total_lsd_staked,omitempty"`
+	RebaseFactor           sdk.Dec `json:"rebase_factor,omitempty"`
 }
 
 func NewLunaAlliance(
 	ibcDenom string,
 	normalizedRewardWeight,
 	annualTakeRate sdk.Dec,
-	totalStaked math.Int,
+	totalLSDStaked sdk.Dec,
 	rebaseFactor sdk.Dec,
 ) LunaAlliance {
 	return LunaAlliance{
 		IBCDenom:               ibcDenom,
 		NormalizedRewardWeight: normalizedRewardWeight,
 		AnnualTakeRate:         annualTakeRate,
-		TotalStaked:            totalStaked,
+		TotalLSDStaked:         totalLSDStaked,
 		RebaseFactor:           rebaseFactor,
-	}
-}
-
-func DefaultNormalizedLunaAlliance() LunaAlliance {
-	return LunaAlliance{
-		IBCDenom:               "",
-		NormalizedRewardWeight: sdk.ZeroDec(),
-		AnnualTakeRate:         sdk.ZeroDec(),
-		TotalStaked:            sdk.ZeroInt(),
-		RebaseFactor:           sdk.ZeroDec(),
 	}
 }

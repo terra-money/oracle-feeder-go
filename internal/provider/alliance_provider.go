@@ -54,11 +54,24 @@ func (p *allianceProvider) getRPCConnection(nodeUrl string, interfaceRegistry sd
 		))
 }
 
-func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (protocolsInfo []types.ProtocolInfo, err error) {
+func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.AllianceProtocolRes, error) {
+	protocolRes := types.DefaultAllianceProtocolRes()
+
 	// Query the all prices at the beginning
 	// to cache the data and avoid querying
 	// the prices each time we query the protocols info.
 	pricesRes := p.providerManager.GetPrices(ctx)
+
+	for _, price := range pricesRes.Prices {
+		if strings.EqualFold(price.Denom, "LUNA") {
+			luna, err := sdktypes.NewDecFromStr(strconv.FormatFloat(price.Price, 'f', -1, 64))
+			if err != nil {
+				fmt.Printf("parse price error for: %s %v \n", price.Denom, err)
+				return nil, err
+			}
+			protocolRes.LunaPrice = luna
+		}
+	}
 
 	// Iterate over all configured nodes in the config file,
 	// create a grpcConnection to each node and query the required data.
@@ -79,7 +92,7 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (protocolsInfo 
 		allianceRes, err := allianceClient.Alliances(ctx, &alliancetypes.QueryAlliancesRequest{})
 		if err != nil {
 			fmt.Printf("allianceRes: %v \n", err)
-			continue
+			return nil, err
 		}
 		if len(allianceRes.Alliances) == 0 {
 			fmt.Printf("No alliances found on: %s \n", grpcUrl)
@@ -89,25 +102,25 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (protocolsInfo 
 		allianceParamsRes, err := allianceClient.Params(ctx, &alliancetypes.QueryParamsRequest{})
 		if err != nil {
 			fmt.Printf("allianceParamsRes: %v \n", err)
-			continue
+			return nil, err
 		}
 
 		nodeRes, err := nodeClient.GetNodeInfo(ctx, &tmservice.GetNodeInfoRequest{})
 		if err != nil {
 			fmt.Printf("nodeRes: %v \n", err)
-			continue
+			return nil, err
 		}
 
 		stakingParamsRes, err := stakingClient.Params(ctx, &stakingtypes.QueryParamsRequest{})
 		if err != nil {
 			fmt.Printf("stakingParamsRes: %v \n", err)
-			continue
+			return nil, err
 		}
 
 		inflationRes, err := mintClient.Inflation(ctx, &mintypes.QueryInflationRequest{})
 		if err != nil {
 			fmt.Printf("inflationRes: %v \n", err)
-			continue
+			return nil, err
 		}
 
 		// Remove the "u" prefix from the bond denom and
@@ -122,10 +135,14 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (protocolsInfo 
 			}
 		}
 
+		if priceRes.Denom == "" {
+			return nil, fmt.Errorf("price not found for: %s", bondDenom)
+		}
+
 		price, err := sdktypes.NewDecFromStr(strconv.FormatFloat(priceRes.Price, 'f', -1, 64))
 		if err != nil {
 			fmt.Printf("parse price error for: %s %v \n", bondDenom, err)
-			continue
+			return nil, err
 		}
 
 		nativeToken := types.NewNativeToken(
@@ -137,16 +154,17 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (protocolsInfo 
 		normalizedLunaAlliance, err := parseAlliances(allianceParamsRes.Params, allianceRes.Alliances, p.config.LSTSData)
 		if err != nil {
 			fmt.Printf("parse alliances error: %v \n", err)
-			continue
+			return nil, err
 		}
-		protocolsInfo = append(protocolsInfo, types.NewProtocolInfo(
+
+		protocolRes.ProtocolsInfo = append(protocolRes.ProtocolsInfo, types.NewProtocolInfo(
 			nodeRes.DefaultNodeInfo.Network,
 			nativeToken,
 			normalizedLunaAlliance,
 		))
 	}
 
-	return protocolsInfo, err
+	return &protocolRes, nil
 }
 
 func parseAlliances(
@@ -168,7 +186,7 @@ func parseAlliances(
 					alliance.Denom,
 					normalizedRewardWeight,
 					annualTakeRate,
-					alliance.TotalTokens,
+					sdktypes.NewDecFromIntWithPrec(alliance.TotalTokens, 6),
 					lstData.RebaseFactor,
 				))
 			}
@@ -181,12 +199,6 @@ func calculateAnnualizedTakeRate(
 	params alliancetypes.Params,
 	alliance alliancetypes.AllianceAsset,
 ) sdktypes.Dec {
-	// If the alliance is not initialized users are not
-	// receiving rewards so effective rate is zero (right now).
-	if !alliance.IsInitialized {
-		return sdktypes.ZeroDec()
-	}
-
 	// When TakeRateClaimInterval is zero it means that users are not
 	// receiving any rewards so annualized take rate is zero (right now).
 	if params.TakeRateClaimInterval == 0 {
@@ -209,29 +221,22 @@ func calculateNormalizedRewardWeight(
 	alliances []alliancetypes.AllianceAsset,
 	alliance alliancetypes.AllianceAsset,
 ) sdktypes.Dec {
-	// If the alliance is not initialized users are not
-	// receiving rewards so NormalizedRewardWeight rate is zero (right now).
-	if !alliance.IsInitialized {
-		return sdktypes.ZeroDec()
-	}
-
 	// When TakeRateClaimInterval is zero it means that users are not
 	// receiving any rewards so NormalizedRewardWeight is zero (right now).
 	if params.TakeRateClaimInterval == 0 {
 		return sdktypes.ZeroDec()
 	}
 
-	// The native token always has 1 of reward weight that's why the
-	// initializedAlliancesRewardWeight is initialized with 1.
-	initializedAlliancesRewardWeight := sdktypes.OneDec()
+	// We shouldd consider that reward weight
+	// starts at one because it also takes in
+	// consideration the OneDec.
+	rewardsWeight := sdktypes.OneDec()
 	for _, alliance := range alliances {
 		// If an alliance is not initialized it means that
 		// rewards are not distributed to that alliance so
 		// it has a reward weight of zero.
-		if alliance.IsInitialized {
-			initializedAlliancesRewardWeight = initializedAlliancesRewardWeight.Add(alliance.RewardWeight)
-		}
+		rewardsWeight = rewardsWeight.Add(alliance.RewardWeight)
 	}
 
-	return alliance.RewardWeight.Quo(initializedAlliancesRewardWeight)
+	return alliance.RewardWeight.Quo(rewardsWeight)
 }

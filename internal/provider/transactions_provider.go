@@ -71,13 +71,13 @@ func NewTransactionsProvider() TransactionsProvider {
 		denom:         "uluna",
 	}
 }
-func (p *TransactionsProvider) ParseAlliancesTransaction(protocolInfo []types.ProtocolInfo) (msg sdk.Msg, err error) {
+func (p *TransactionsProvider) ParseAlliancesTransaction(protocolRes *types.AllianceProtocolRes) (msg sdk.Msg, err error) {
 	bech32Addr, err := bech32.ConvertAndEncode(p.prefix, p.address)
 	if err != nil {
 		return msg, err
 	}
 
-	executeMsg := pkgtypes.NewUpdateDataMsg(protocolInfo)
+	executeMsg := pkgtypes.NewMsgUpdateChainsInfo(*protocolRes)
 	executeB, err := json.Marshal(executeMsg)
 	if err != nil {
 		return msg, err

@@ -4,12 +4,18 @@ import (
 	"github.com/terra-money/oracle-feeder-go/internal/types"
 )
 
-type UpdateDataMsg struct {
-	UpdateData []types.ProtocolInfo `json:"update_data"`
+type MsgUpdateChainsInfo struct {
+	UpdateChainsInfo UpdateChainsInfo `json:"update_chains_info"`
 }
 
-func NewUpdateDataMsg(data []types.ProtocolInfo) UpdateDataMsg {
-	return UpdateDataMsg{
-		UpdateData: data,
+type UpdateChainsInfo struct {
+	ChainsInfo types.AllianceProtocolRes `json:"chains_info"`
+}
+
+func NewMsgUpdateChainsInfo(data types.AllianceProtocolRes) MsgUpdateChainsInfo {
+	return MsgUpdateChainsInfo{
+		UpdateChainsInfo: UpdateChainsInfo{
+			ChainsInfo: data,
+		},
 	}
 }

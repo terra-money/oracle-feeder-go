@@ -35,13 +35,13 @@ func main() {
 	}
 	txHash, err := provider.SubmitAlliancesTransaction(ctx, []sdk.Msg{msg})
 	if err != nil {
-		log.Fatal("ERROR submittin alliances data on chain ", err)
+		log.Fatal("ERROR submitting alliances data on chain ", err)
 	}
 
 	fmt.Printf("Transaction Submitted successfully txHash: %d \n", txHash)
 }
 
-func requestAlliancesData() (res []types.ProtocolInfo, err error) {
+func requestAlliancesData() (res *types.AllianceProtocolRes, err error) {
 	var url string
 	if url = os.Getenv("PRICE_SERVER_URL"); len(url) == 0 {
 		url = "http://localhost:8532"
