@@ -2,18 +2,14 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
-	"github.com/terra-money/oracle-feeder-go/internal/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 func main() {
@@ -22,49 +18,34 @@ func main() {
 		log.Fatal("Error loading .env file:", err)
 	}
 
+	retries := 3
+	if feederRetries := os.Getenv("FEEDER_RETRIES"); feederRetries != "" {
+		retries, err = strconv.Atoi(feederRetries)
+		if err != nil {
+			log.Fatal("Error parsing FEEDER_RETRIES:", err)
+		}
+	}
+
 	ctx := context.Background()
-	provider := provider.NewTransactionsProvider()
+	alliancesQuerierProvider := provider.NewAlliancesQuerierProvider()
 
-	res, err := requestAlliancesData()
-	if err != nil {
-		log.Fatal("ERROR requesting alliances data", err)
-	}
-	msg, err := provider.ParseAlliancesTransaction(res)
-	if err != nil {
-		log.Fatal("ERROR parsing alliances data", err)
-	}
-	txHash, err := provider.SubmitAlliancesTransaction(ctx, []sdk.Msg{msg})
-	if err != nil {
-		log.Fatal("ERROR submitting alliances data on chain ", err)
-	}
+	for attempt := 1; attempt <= retries; attempt++ {
+		_, err := alliancesQuerierProvider.QueryAndSubmitOnChain(ctx)
 
-	fmt.Printf("Transaction Submitted successfully txHash: %d \n", txHash)
-}
+		if err == nil {
+			// Code executed successfully
+			break
+		} else {
+			// Code execution failed
+			fmt.Printf("Attempt %d failed: %v\n", attempt, err)
 
-func requestAlliancesData() (res *types.AllianceProtocolRes, err error) {
-	var url string
-	if url = os.Getenv("PRICE_SERVER_URL"); len(url) == 0 {
-		url = "http://localhost:8532"
-	}
-	// Send GET request
-	resp, err := http.Get(url + "/alliance/protocol")
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
+			if attempt == retries {
+				fmt.Println("All attempts failed. Exiting...")
+				break
+			}
 
-	// Read response body
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
+			fmt.Printf("Retrying in 15 seconds...\n")
+			time.Sleep(15 * time.Second)
+		}
 	}
-
-	// Parse JSON response into struct
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		return nil, err
-	}
-
-	// Access parsed data
-	return res, nil
 }

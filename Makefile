@@ -9,7 +9,7 @@ start-feeder:
 start-price-server:
 	go run ./cmd/price-server/price_server.go
 
-.PHONY: start-oracle-feeder start-price-server
+.PHONY: start-feeder start-price-server
 
 
 #################################################
@@ -21,7 +21,7 @@ install-feeder:
 install-price-server:
 	go install ./cmd/price-server/price_server.go
 
-.PHONY: install-oracle-feeder install-price-server
+.PHONY: install-feeder install-price-server
 
 
 #################################################
@@ -33,7 +33,7 @@ build-feeder:
 build-price-server:
 	go build -o ./build/ ./cmd/price-server/price_server.go
 
-.PHONY: build-oracle-feeder build-price-server
+.PHONY: build-feeder build-price-server
 
 
 #################################################
