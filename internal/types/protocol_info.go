@@ -17,47 +17,64 @@ func DefaultAllianceProtocolRes() AllianceProtocolRes {
 }
 
 type ProtocolInfo struct {
-	ChainId       string         `json:"chain_id,omitempty"`
-	NativeToken   NativeToken    `json:"native_token,omitempty"`
-	LunaAlliances []LunaAlliance `json:"luna_alliances,omitempty"`
+	ChainId                 string         `json:"chain_id,omitempty"`
+	NativeToken             NativeToken    `json:"native_token,omitempty"`
+	LunaAlliances           []LunaAlliance `json:"luna_alliances"`
+	ChainAlliancesOnPhoenix []BaseAlliance `json:"chain_alliances_on_phoenix"`
 }
 
 func NewProtocolInfo(
 	chainId string,
 	nativeToken NativeToken,
 	lunaAlliances []LunaAlliance,
+	chainAlliancesOnPhoenix []BaseAlliance,
 ) ProtocolInfo {
 	return ProtocolInfo{
-		ChainId:       chainId,
-		NativeToken:   nativeToken,
-		LunaAlliances: lunaAlliances,
+		ChainId:                 chainId,
+		NativeToken:             nativeToken,
+		LunaAlliances:           lunaAlliances,
+		ChainAlliancesOnPhoenix: chainAlliancesOnPhoenix,
 	}
 }
 
 type NativeToken struct {
-	Denom           string  `json:"denom,omitempty"`
-	TokenPrice      sdk.Dec `json:"token_price,omitempty"`
-	AnnualInflation sdk.Dec `json:"annual_inflation,omitempty"`
+	Denom            string  `json:"denom,omitempty"`
+	TokenPrice       sdk.Dec `json:"token_price,omitempty"`
+	AnnualProvisions sdk.Dec `json:"annual_provisions,omitempty"`
 }
 
 func NewNativeToken(
 	denom string,
 	tokenPrice sdk.Dec,
-	annualInflation sdk.Dec,
+	annualProvisions sdk.Dec,
 ) NativeToken {
 	return NativeToken{
-		Denom:           denom,
-		TokenPrice:      tokenPrice,
-		AnnualInflation: annualInflation,
+		Denom:            denom,
+		TokenPrice:       tokenPrice,
+		AnnualProvisions: annualProvisions,
+	}
+}
+
+type BaseAlliance struct {
+	IBCDenom     string  `json:"ibc_denom,omitempty"`
+	RebaseFactor sdk.Dec `json:"rebase_factor,omitempty"`
+}
+
+func NewBaseAlliance(
+	ibcDenom string,
+	rebaseFactor sdk.Dec,
+) BaseAlliance {
+	return BaseAlliance{
+		IBCDenom:     ibcDenom,
+		RebaseFactor: rebaseFactor,
 	}
 }
 
 type LunaAlliance struct {
-	IBCDenom               string  `json:"ibc_denom,omitempty"`
+	BaseAlliance
 	NormalizedRewardWeight sdk.Dec `json:"normalized_reward_weight,omitempty"`
 	AnnualTakeRate         sdk.Dec `json:"annual_take_rate,omitempty"`
 	TotalLSDStaked         sdk.Dec `json:"total_lsd_staked,omitempty"`
-	RebaseFactor           sdk.Dec `json:"rebase_factor,omitempty"`
 }
 
 func NewLunaAlliance(
@@ -67,11 +84,14 @@ func NewLunaAlliance(
 	totalLSDStaked sdk.Dec,
 	rebaseFactor sdk.Dec,
 ) LunaAlliance {
+	baseAlliance := BaseAlliance{
+		IBCDenom:     ibcDenom,
+		RebaseFactor: rebaseFactor,
+	}
 	return LunaAlliance{
-		IBCDenom:               ibcDenom,
+		BaseAlliance:           baseAlliance,
 		NormalizedRewardWeight: normalizedRewardWeight,
 		AnnualTakeRate:         annualTakeRate,
 		TotalLSDStaked:         totalLSDStaked,
-		RebaseFactor:           rebaseFactor,
 	}
 }

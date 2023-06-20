@@ -1455,4 +1455,13 @@ var DefaultAllianceConfig = AllianceConfig{
 			RebaseFactor: sdktypes.MustNewDecFromStr("1.057000000000000000"),
 		},
 	},
+	LSTOnPhoenix: []LSTOnPhoenix{
+		{
+			CounterpartyChainId: "carbon-1",
+			LSTData: LSTData{
+				IBCDenom:     "ibc/random_denom",
+				RebaseFactor: sdktypes.MustNewDecFromStr("1.057000000000000000"),
+			},
+		},
+	},
 }

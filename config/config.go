@@ -19,11 +19,17 @@ type ProviderConfig struct {
 }
 
 type AllianceConfig struct {
-	GRPCUrls []string  `json:"lcdList,omitempty"`
-	LSTSData []LSTData `json:"lstData,omitempty"`
+	GRPCUrls     []string       `json:"lcdList,omitempty"`
+	LSTSData     []LSTData      `json:"lstData,omitempty"`
+	LSTOnPhoenix []LSTOnPhoenix `json:"lstOnPhoenix,omitempty"`
 }
 
 type LSTData struct {
 	IBCDenom     string       `json:"ibcDenom,omitempty"`
 	RebaseFactor sdktypes.Dec `json:"rebaseFactor,omitempty"`
+}
+
+type LSTOnPhoenix struct {
+	LSTData
+	CounterpartyChainId string `json:"counterpartyChainId,omitempty"`
 }

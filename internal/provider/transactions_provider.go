@@ -3,6 +3,7 @@ package provider
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
@@ -83,6 +84,7 @@ func (p *TransactionsProvider) ParseAlliancesTransaction(protocolRes *types.Alli
 		return msg, err
 	}
 
+	fmt.Printf("%s", executeB)
 	// This needs to be a smart contract send execution
 	msg = &wasmtypes.MsgExecuteContract{
 		Sender:   bech32Addr,

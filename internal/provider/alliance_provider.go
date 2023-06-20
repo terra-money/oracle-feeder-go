@@ -117,9 +117,9 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 			return nil, err
 		}
 
-		inflationRes, err := mintClient.Inflation(ctx, &mintypes.QueryInflationRequest{})
+		annualProvisionsRes, err := mintClient.AnnualProvisions(ctx, &mintypes.QueryAnnualProvisionsRequest{})
 		if err != nil {
-			fmt.Printf("inflationRes: %v \n", err)
+			fmt.Printf("annualProvisionsRes: %v \n", err)
 			return nil, err
 		}
 
@@ -148,30 +148,43 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 		nativeToken := types.NewNativeToken(
 			stakingParamsRes.GetParams().BondDenom,
 			price,
-			inflationRes.Inflation,
+			annualProvisionsRes.AnnualProvisions,
 		)
 
-		normalizedLunaAlliance, err := parseAlliances(allianceParamsRes.Params, allianceRes.Alliances, p.config.LSTSData)
-		if err != nil {
-			fmt.Printf("parse alliances error: %v \n", err)
-			return nil, err
-		}
+		normalizedLunaAlliance := parseLunaAlliances(allianceParamsRes.Params, allianceRes.Alliances, p.config.LSTSData)
+		alliancesOnPhoenix := p.filterAlliancesOnPhoenix(nodeRes)
 
 		protocolRes.ProtocolsInfo = append(protocolRes.ProtocolsInfo, types.NewProtocolInfo(
 			nodeRes.DefaultNodeInfo.Network,
 			nativeToken,
 			normalizedLunaAlliance,
+			alliancesOnPhoenix,
 		))
 	}
 
 	return &protocolRes, nil
 }
 
-func parseAlliances(
+func (p *allianceProvider) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeInfoResponse) []types.BaseAlliance {
+	baseAlliances := []types.BaseAlliance{}
+
+	for _, allianceOnPhoenix := range p.config.LSTOnPhoenix {
+		if allianceOnPhoenix.CounterpartyChainId == nodeRes.DefaultNodeInfo.Network {
+			baseAlliances = append(baseAlliances, types.BaseAlliance{
+				IBCDenom:     allianceOnPhoenix.IBCDenom,
+				RebaseFactor: allianceOnPhoenix.RebaseFactor,
+			})
+		}
+	}
+	return baseAlliances
+}
+
+func parseLunaAlliances(
 	allianceParams alliancetypes.Params,
 	alliances []alliancetypes.AllianceAsset,
 	lstsData []config.LSTData,
-) (lunaAlliances []types.LunaAlliance, err error) {
+) []types.LunaAlliance {
+	lunaAlliances := []types.LunaAlliance{}
 
 	for _, lstData := range lstsData {
 		for _, alliance := range alliances {
@@ -192,7 +205,7 @@ func parseAlliances(
 			}
 		}
 	}
-	return lunaAlliances, nil
+	return lunaAlliances
 }
 
 func calculateAnnualizedTakeRate(
