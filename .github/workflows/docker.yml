@@ -1,0 +1,139 @@
+name: docker-build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - develop
+  push:
+    branches:
+      - main
+      - develop
+
+    tags:
+      - 'v*'
+
+env:
+  TERRAFORM_REPO: 'terra-money/tf-terra-oracle'
+
+jobs:
+  refs-parsing:
+    runs-on: ubuntu-latest
+    outputs:
+      oracle_address: ${{ steps.parse-refs.outputs.oracle_address }}
+      price_server_port: ${{ steps.parse-refs.outputs.price_server_port }}
+      feeder_retries: ${{ steps.parse-refs.outputs.feeder_retries }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Parse refs.json
+        id: parse-refs
+        run: |
+          # Install jq to parse JSON
+          sudo apt-get update
+          sudo apt-get install -y jq
+
+          # Parse refs.json and extract the required information
+          ORACLE_ADDRESS=$(jq -r '.oracle_address' params.json)
+          PRICE_SERVER_PORT=$(jq -r '.price_server_port' params.json)
+          FEEDER_RETRIES=$(jq -r '.feeder_retries' params.json)
+
+          # Set output parameters for subsequent jobs
+          echo "::set-output name=oracle_address::$ORACLE_ADDRESS"
+          echo "::set-output name=price_server_port::$PRICE_SERVER_PORT"
+          echo "::set-output name=feeder_retries::$FEEDER_RETRIES"
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # https://docs.docker.com/build/ci/github-actions/multi-platform/
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      # Workaround: https://github.com/docker/build-push-action/issues/461
+      - name: Setup Docker buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to the github container registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_KEY }}
+          aws-region: ap-northeast-2
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          images: |
+            ghcr.io/${{ github.repository }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ github.event.repository.name }}
+          tags: |
+            type=sha
+            type=edge,branch=develop
+            type=semver,pattern={{tag}}
+            type=semver,pattern={{version}}
+            type=raw,value=latest,event=branch,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            type=raw,value=develop,event=branch,enable=${{ github.ref == format('refs/heads/{0}', 'develop') }}
+
+      - name: Build docker image
+        uses: docker/build-push-action@v3
+        with:
+          push: ${{ github.event_name != 'pull_request' }}
+          file: Dockerfile
+          platforms: linux/amd64
+          # platforms: linux/amd64,linux/arm64
+          tags: ${{ env.DOCKER_METADATA_OUTPUT_TAGS }}
+          labels: ${{ env.DOCKER_METADATA_OUTPUT_LABELS }}
+
+  dispatch:
+    runs-on: ubuntu-latest
+    needs: [build, refs-parsing]
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+
+    steps:
+      - name: Set Remote ref
+        run: |
+          if [ ${GITHUB_REF} == "refs/heads/main" ]; then
+            echo "TF_GITHUB_REF=phoenix-1" >> $GITHUB_ENV
+            echo "TAG=main" >> $GITHUB_ENV
+          elif [ ${GITHUB_REF} == "refs/heads/develop" ]; then
+            echo "TF_GITHUB_REF=pisco-1" >> $GITHUB_ENV
+            echo "TAG=develop" >> $GITHUB_ENV
+          fi
+
+      - name: Check variables
+        run: |
+          if [[ ! "${{ needs.refs-parsing.outputs.oracle_address }}" =~ ^terra ]]; then
+            echo "ORACLE_ADDRESS does not start with 'terra'"
+            exit 1
+          fi
+
+      - name: Invoke Terraform Workflow
+        uses: aurelien-baudet/workflow-dispatch@v2
+        with:
+          repo: ${{ env.TERRAFORM_REPO }}
+          ref: ${{ env.TF_GITHUB_REF }}
+          workflow: Terraform
+          token: ${{ secrets.TFL_GITHUB_TOKEN }}
+          inputs: '{ "ORACLE_ADDRESS": "${{ needs.refs-parsing.outputs.oracle_address }}", "PRICE_SERVER_PORT": "${{needs.refs-parsing.outputs.price_server_port}}", "FEEDER_RETRIES": "${{needs.refs-parsing.outputs.feeder_retries}}", "TAG": "${{env.TAG}}"  }'

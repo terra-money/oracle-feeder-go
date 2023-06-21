@@ -15,9 +15,8 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file:", err)
+		log.Print("Error loading .env file:", err)
 	}
-
 	retries := 3
 	if feederRetries := os.Getenv("FEEDER_RETRIES"); feederRetries != "" {
 		retries, err = strconv.Atoi(feederRetries)
