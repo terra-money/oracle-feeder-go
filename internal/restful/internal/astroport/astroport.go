@@ -34,12 +34,11 @@ func (p *AstroportClient) FetchAndParse(symbols []string, timeout int) (map[stri
 		return nil, err
 	}
 	res := p.parseAmounts(astroData)
-	fmt.Print(res)
 	return res, nil
 }
 
-func (p *AstroportClient) fetchPrices(symbols []string, timeout int) (map[string]AstroportData, error) {
-	astroData := make(map[string]AstroportData)
+func (p *AstroportClient) fetchPrices(symbols []string, timeout int) (map[string]internal_types.AstroportData, error) {
+	astroData := make(map[string]internal_types.AstroportData)
 	for _, symbol := range symbols {
 		symbolSplit := strings.Split(symbol, "-")
 		data, err := p.queryData(symbolSplit[0], symbolSplit[1])
@@ -56,7 +55,7 @@ func (p *AstroportClient) fetchPrices(symbols []string, timeout int) (map[string
 	return astroData, nil
 }
 
-func (p *AstroportClient) queryData(start, end string) (res []AstroportData, err error) {
+func (p *AstroportClient) queryData(start, end string) (res []internal_types.AstroportData, err error) {
 	urlParams := fmt.Sprintf("?start=%s&end=%s&amount=%d&chainId=%s", start, end, p.amount, p.chainId)
 
 	// Send GET request
@@ -81,7 +80,7 @@ func (p *AstroportClient) queryData(start, end string) (res []AstroportData, err
 	return res, nil
 }
 
-func (p *AstroportClient) parseAmounts(res map[string]AstroportData) map[string]internal_types.PriceBySymbol {
+func (p *AstroportClient) parseAmounts(res map[string]internal_types.AstroportData) map[string]internal_types.PriceBySymbol {
 	prices := make(map[string]internal_types.PriceBySymbol)
 	now := uint64(time.Now().UnixMilli())
 	for symbol, value := range res {

@@ -8,24 +8,19 @@ import (
 
 	alliancetypes "github.com/terra-money/alliance/x/alliance/types"
 	"github.com/terra-money/oracle-feeder-go/config"
+	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
 	pricetypes "github.com/terra-money/oracle-feeder-go/pkg/types"
-	"google.golang.org/grpc"
-
-	"crypto/tls"
-
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/codec/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	mintypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 )
 
 type allianceProvider struct {
+	internal.BaseGrpc
+	LSDProvider
 	config          *config.AllianceConfig
 	providerManager *ProviderManager
 }
@@ -33,25 +28,11 @@ type allianceProvider struct {
 func NewAllianceProvider(config *config.AllianceConfig, providerManager *ProviderManager) *allianceProvider {
 
 	return &allianceProvider{
+		BaseGrpc:        *internal.NewBaseGrpc(),
+		LSDProvider:     *NewLSDProvider(),
 		config:          config,
 		providerManager: providerManager,
 	}
-}
-
-func (p *allianceProvider) getRPCConnection(nodeUrl string, interfaceRegistry sdk.InterfaceRegistry) (*grpc.ClientConn, error) {
-	var authCredentials = grpc.WithTransportCredentials(insecure.NewCredentials())
-
-	if strings.Contains(nodeUrl, "carbon") {
-		authCredentials = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
-	}
-
-	return grpc.Dial(
-		nodeUrl,
-		authCredentials,
-		grpc.WithDefaultCallOptions(
-			grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec()),
-			grpc.MaxCallRecvMsgSize(1024*1024*16), // 16MB
-		))
 }
 
 func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.AllianceProtocolRes, error) {
@@ -61,7 +42,14 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 	// to cache the data and avoid querying
 	// the prices each time we query the protocols info.
 	pricesRes := p.providerManager.GetPrices(ctx)
-	lstsData := p.parseLstsRebaseFactor(p.config.LSTSData, pricesRes)
+
+	// Given the default list of LSTSData this method
+	// queries the blockchain for the rebase factor of the LSD.
+	lstsData, err := p.queryRebaseFactors(p.config.LSTSData)
+	if err != nil {
+		fmt.Printf("queryRebaseFactors: %v \n", err)
+		return nil, err
+	}
 
 	// Setup Luna price
 	for _, price := range pricesRes.Prices {
@@ -78,7 +66,7 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 	// Iterate over all configured nodes in the config file,
 	// create a grpcConnection to each node and query the required data.
 	for _, grpcUrl := range p.config.GRPCUrls {
-		grpcConn, err := p.getRPCConnection(grpcUrl, nil)
+		grpcConn, err := p.BaseGrpc.Connection(grpcUrl, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -166,33 +154,17 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 
 	return &protocolRes, nil
 }
-func (p *allianceProvider) parseLstsRebaseFactor(configLST []config.LSTData, prices *pricetypes.PricesResponse) []config.LSTData {
-	var LUNA_USD_PRICE float64
-	var parsedLSTData = []config.LSTData{}
-
-	// Find LUNA  price
-	for _, price := range prices.Prices {
-		if strings.EqualFold(price.Denom, "LUNA") {
-			LUNA_USD_PRICE = price.Price
+func (p *allianceProvider) queryRebaseFactors(configLST []config.LSTData) ([]config.LSTData, error) {
+	for i, lst := range configLST {
+		rebaseFactor, err := p.LSDProvider.QueryLSTRebaseFactor(lst.Symbol)
+		if err != nil {
+			fmt.Printf("queryRebaseFactors: %v \n", err)
+			continue
 		}
+		configLST[i].RebaseFactor = *rebaseFactor
 	}
 
-	for i := 0; i < len(configLST); i++ {
-		for _, price := range prices.Prices {
-			if strings.EqualFold(price.Denom, configLST[i].Symbol) {
-				rebaseFactor := price.Price / LUNA_USD_PRICE
-				parsedRebaseFactor, err := sdktypes.NewDecFromStr(strconv.FormatFloat(rebaseFactor, 'f', -1, 64))
-				if err != nil {
-					fmt.Printf("parse price error for: %s %v \n", price.Denom, err)
-					return nil
-				}
-				configLST[i].RebaseFactor = parsedRebaseFactor
-				parsedLSTData = append(parsedLSTData, configLST[i])
-			}
-		}
-	}
-
-	return parsedLSTData
+	return configLST, nil
 
 }
 

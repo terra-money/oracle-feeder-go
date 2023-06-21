@@ -1,4 +1,4 @@
-package astroport
+package types
 
 type AstroportData struct {
 	Path             Path     `json:"path"`
@@ -41,19 +41,19 @@ type AstroSwap struct {
 }
 
 type OfferAssetInfo struct {
-	Token       *Token       `json:"token,omitempty"`
-	NativeToken *NativeToken `json:"native_token,omitempty"`
+	Token       *Token            `json:"token,omitempty"`
+	NativeToken *AstroNativeToken `json:"native_token,omitempty"`
 }
 
 type AskAssetInfo struct {
-	Token       *Token       `json:"token,omitempty"`
-	NativeToken *NativeToken `json:"native_token,omitempty"`
+	Token       *Token            `json:"token,omitempty"`
+	NativeToken *AstroNativeToken `json:"native_token,omitempty"`
 }
 
 type Token struct {
 	ContractAddr string `json:"contract_addr"`
 }
 
-type NativeToken struct {
+type AstroNativeToken struct {
 	Denom string `json:"denom"`
 }
