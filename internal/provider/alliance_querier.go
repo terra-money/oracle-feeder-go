@@ -36,7 +36,7 @@ func (a alliancesQuerierProvider) QueryAndSubmitOnChain(ctx context.Context) (re
 		return nil, fmt.Errorf("ERROR submitting alliances data on chain %w", err)
 	}
 
-	fmt.Printf("Transaction Submitted successfully txHash: %d \n", txHash)
+	fmt.Printf("Transaction Submitted successfully txHash: %s \n", txHash)
 	return res, nil
 }
 
