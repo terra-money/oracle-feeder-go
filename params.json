@@ -1,0 +1,6 @@
+{
+    "app_name": "oracle",
+    "price_server_port": "8532",
+    "oracle_address": "terra1vhndln95yd7rngslzvf6sax6axcshkxqpmpr886ntelh28p9ghuqspfswp",
+    "feeder_retries": 4
+}
