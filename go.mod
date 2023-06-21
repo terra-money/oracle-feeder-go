@@ -3,7 +3,6 @@ module github.com/terra-money/oracle-feeder-go
 go 1.20
 
 require (
-	cosmossdk.io/math v1.0.0-rc.0
 	github.com/CosmWasm/wasmd v1.0.0
 	github.com/cosmos/cosmos-sdk v0.46.13
 	github.com/gin-gonic/gin v1.9.0
@@ -18,6 +17,7 @@ require (
 
 require (
 	cosmossdk.io/errors v1.0.0-beta.7 // indirect
+	cosmossdk.io/math v1.0.0-rc.0 // indirect
 	filippo.io/edwards25519 v1.0.0-rc.1 // indirect
 	github.com/99designs/go-keychain v0.0.0-20191008050251-8e49817e8af4 // indirect
 	github.com/99designs/keyring v1.2.1 // indirect
@@ -46,7 +46,7 @@ require (
 	github.com/decred/dcrd/dcrec/secp256k1/v4 v4.1.0 // indirect
 	github.com/dgraph-io/badger/v3 v3.2103.2 // indirect
 	github.com/dgraph-io/ristretto v0.1.0 // indirect
-	github.com/docker/distribution v2.8.1+incompatible // indirect
+	github.com/docker/distribution v2.8.2+incompatible // indirect
 	github.com/dustin/go-humanize v1.0.1-0.20200219035652-afde56e7acac // indirect
 	github.com/dvsekhvalnov/jose2go v1.5.0 // indirect
 	github.com/fsnotify/fsnotify v1.6.0 // indirect
