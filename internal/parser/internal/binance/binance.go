@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/terra-money/oracle-feeder-go/configs"
+	"github.com/terra-money/oracle-feeder-go/config"
 )
 
 func ParseSymbol(symbol string) (string, string, error) {
 	symbol = strings.ToUpper(symbol)
-	for _, coin := range configs.FiatCoins {
+	for _, coin := range config.FiatCoins {
 		if strings.HasSuffix(symbol, coin) {
 			base := strings.TrimSuffix(symbol, coin)
 			return base, coin, nil
 		}
 	}
-	for _, coin := range configs.StableCoins {
+	for _, coin := range config.StableCoins {
 		if strings.HasSuffix(symbol, coin) {
 			base := strings.TrimSuffix(symbol, coin)
 			return base, coin, nil

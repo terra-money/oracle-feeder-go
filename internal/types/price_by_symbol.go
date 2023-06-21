@@ -1,6 +1,6 @@
 package types
 
-// PriceBySymbol represents the price of a trading symbol at a timestmap.
+// PriceBySymbol represents the price of a trading symbol at a timestamp.
 type PriceBySymbol struct {
 	Exchange  string
 	Symbol    string // Exchange-specific trading symbol, e.g., XBTUSD from bitmex

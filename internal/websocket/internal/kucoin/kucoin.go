@@ -72,7 +72,10 @@ func (wc *WebsocketClient) ConnectAndSubscribe(symbols []string) (*websocket.Con
 
 func (wc *WebsocketClient) HandleMsg(msg []byte, conn *websocket.Conn) (*types.CandlestickMsg, error) {
 	var jsonObj map[string]any
-	json.Unmarshal(msg, &jsonObj)
+	err := json.Unmarshal(msg, &jsonObj)
+	if err != nil {
+		return nil, err
+	}
 	if typ, ok := jsonObj["type"]; ok && typ == "pong" {
 		return nil, nil
 	}
@@ -140,7 +143,10 @@ func generateCommands(symbols []string) []map[string]interface{} {
 
 func parseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
 	var msg RawCandlestickMsg
-	json.Unmarshal(rawMsg, &msg)
+	err := json.Unmarshal(rawMsg, &msg)
+	if err != nil {
+		return nil, err
+	}
 
 	candles := msg.Data.Candles
 	if len(candles) != 7 {

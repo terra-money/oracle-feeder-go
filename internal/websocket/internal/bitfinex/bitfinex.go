@@ -133,20 +133,17 @@ func parseCandlestickMsg(conn *websocket.Conn, rawMsg []byte) (*types.Candlestic
 		return nil, err
 	}
 
-	// fmt.Printf("rawMsg: %s symbol: %s\n", string(rawMsg), symbol)
-
 	var candles []interface{}
 	items, ok := arr[1].([]interface{})
 	if !ok {
 		heartbeatMsg, ok := arr[1].(string)
 		if ok && heartbeatMsg == "hb" {
-			conn.WriteJSON(map[string]string{"event": "ping"})
-			return nil, nil
+			err := conn.WriteJSON(map[string]string{"event": "ping"})
+			return nil, err
 		}
 		return nil, fmt.Errorf("invalid msg: %v", string(rawMsg))
 	}
 
-	// fmt.Printf("first item: %v\n", items[0])
 	candles, ok = items[0].([]interface{})
 	if !ok {
 		candles = items

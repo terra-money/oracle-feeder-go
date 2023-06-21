@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/terra-money/oracle-feeder-go/configs"
+	"github.com/terra-money/oracle-feeder-go/config"
 	"github.com/terra-money/oracle-feeder-go/internal/parser"
 	internal_types "github.com/terra-money/oracle-feeder-go/internal/types"
 	"github.com/terra-money/oracle-feeder-go/pkg/types"
@@ -24,7 +24,7 @@ type OsmosisEndpoint struct {
 
 type OsmosisProvider struct {
 	priceBySymbol map[string]internal_types.PriceBySymbol
-	config        *configs.ProviderConfig
+	config        *config.ProviderConfig
 	mu            *sync.Mutex
 }
 
@@ -51,7 +51,7 @@ var whiteListPoolIds = map[string]string{
 }
 var idToSymbols = make(map[string]string)
 
-func NewOsmosisProvider(config *configs.ProviderConfig, stopCh <-chan struct{}) (*OsmosisProvider, error) {
+func NewOsmosisProvider(config *config.ProviderConfig, stopCh <-chan struct{}) (*OsmosisProvider, error) {
 	mu := sync.Mutex{}
 	provider := &OsmosisProvider{
 		priceBySymbol: make(map[string]internal_types.PriceBySymbol),
@@ -139,7 +139,6 @@ func (p *OsmosisProvider) fetchAndParse() {
 
 func fetchPrices(symbols []string) ([]interface{}, error) {
 	url, err := rotateUrl()
-	// fmt.Printf("url: %s\n", url)
 	if err != nil {
 		return nil, err
 	}
@@ -233,6 +232,5 @@ func parseJSON(msg []interface{}) (map[string]internal_types.PriceBySymbol, erro
 			prices[pairPrice.Symbol] = pairPrice
 		}
 	}
-	// fmt.Printf("osmoPrice: %v prices: %v\n", osmoPrice, prices)
 	return prices, nil
 }

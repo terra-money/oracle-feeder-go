@@ -1,28 +1,30 @@
 package provider
 
 import (
+	"context"
 	"fmt"
 	"strings"
 	"time"
 
-	"github.com/terra-money/oracle-feeder-go/configs"
+	"github.com/terra-money/oracle-feeder-go/config"
 	"github.com/terra-money/oracle-feeder-go/pkg/types"
 )
 
 type ProviderManager struct {
-	config    *configs.Config
+	config    *config.Config
 	providers map[string]Provider
 }
 
-func NewProviderManager(config *configs.Config, stopCh <-chan struct{}) *ProviderManager {
+func NewProviderManager(config *config.Config, stopCh <-chan struct{}) *ProviderManager {
 	providers := make(map[string]Provider)
 	for _, exchange := range config.ProviderPriority {
 		providerConfig := config.Providers[exchange]
 		provider, err := NewProvider(exchange, &providerConfig, stopCh)
 		if err != nil {
-			panic(err)
+			fmt.Printf("Exchange %s connection ERROR %s \n", exchange, err)
+		} else {
+			providers[exchange] = provider
 		}
-		providers[exchange] = provider
 	}
 	return &ProviderManager{
 		config:    config,
@@ -30,7 +32,7 @@ func NewProviderManager(config *configs.Config, stopCh <-chan struct{}) *Provide
 	}
 }
 
-func (m *ProviderManager) GetPrices() *types.PricesResponse {
+func (m *ProviderManager) GetPrices(ctx context.Context) *types.PricesResponse {
 	// exchange -> base -> price
 	prices := make(map[string]map[string]types.PriceByPair)
 	for exchange, provider := range m.providers {
@@ -43,17 +45,31 @@ func (m *ProviderManager) GetPrices() *types.PricesResponse {
 	now := uint64(time.Now().UnixMilli())
 	for coin, price := range priceByCoin {
 		pricesOfCoins = append(pricesOfCoins, types.PriceOfCoin{
-			Coin:      coin,
+			Denom:     coin,
 			Price:     price,
 			Timestamp: now,
 		})
 	}
 	resp := &types.PricesResponse{
-		Timestap: time.Now().UTC().Format(time.RFC3339),
-		Prices:   pricesOfCoins,
+		Timestamp: time.Now().UTC().Format(time.RFC3339),
+		Prices:    pricesOfCoins,
 	}
 
 	return resp
+}
+
+func (m *ProviderManager) GetPrice(ctx context.Context, denom string) *types.PriceResponse {
+	r := m.GetPrices(ctx)
+	for _, price := range r.Prices {
+		if strings.EqualFold(price.Denom, denom) {
+			return &types.PriceResponse{
+				Timestamp: time.Now().UTC().Format(time.RFC3339),
+				Price:     price,
+			}
+		}
+	}
+
+	return nil
 }
 
 // Calculate average price for each pair.

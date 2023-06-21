@@ -82,7 +82,10 @@ func generateCommand(symbols []string) map[string]interface{} {
 
 func parseCandlestickMsg(rawMsg []byte) (*types.CandlestickMsg, error) {
 	var msg RawCandlestickMsg
-	json.Unmarshal(rawMsg, &msg)
+	err := json.Unmarshal(rawMsg, &msg)
+	if err != nil {
+		return nil, err
+	}
 	symbol := msg.Data.Kline["s"].(string)
 	base, quote, err := parser.ParseSymbol(exchangeName, symbol)
 	if err != nil {

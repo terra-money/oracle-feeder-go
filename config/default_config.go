@@ -1,6 +1,10 @@
-package configs
+package config
 
-var DefaultConfig = Config{
+import (
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
+)
+
+var DefaultPriceServerConfig = Config{
 	Port:             8532,
 	MetricsPort:      8533,
 	Sentry:           "",
@@ -288,21 +292,16 @@ var DefaultConfig = Config{
 				"algousdt",
 				"ankrusdt",
 				"apeusdt",
-				"aptusdc",
 				"aptusdt",
 				"atomusdt",
 				"avaxusdt",
-				"axsusdc",
 				"axsusdt",
-				"bchusdc",
 				"bchusdt",
 				"bitusdt",
 				"blurusdt",
 				"bnbusdt",
 				"bsvusdt",
-				"btcusdc",
 				"btcusdt",
-				"bttusdc",
 				"bttusdt",
 				"c98usdt",
 				"cakeusdt",
@@ -319,14 +318,11 @@ var DefaultConfig = Config{
 				"egldusdt",
 				"enjusdt",
 				"eosusdt",
-				"etcusdc",
 				"etcusdt",
-				"ethusdc",
 				"ethusdt",
 				"fetusdt",
 				"filusdt",
 				"flokiusdt",
-				"flowusdc",
 				"flowusdt",
 				"flrusdt",
 				"ftmusdt",
@@ -335,7 +331,6 @@ var DefaultConfig = Config{
 				"gmxusdt",
 				"grtusdt",
 				"gtusdt",
-				"hbarusdc",
 				"hbarusdt",
 				"htusdt",
 				"icpusdt",
@@ -345,9 +340,7 @@ var DefaultConfig = Config{
 				"klayusdt",
 				"ksmusdt",
 				"ldousdt",
-				"linkusdc",
 				"linkusdt",
-				"lrcusdc",
 				"lrcusdt",
 				"ltcusdt",
 				"lunausdt",
@@ -362,31 +355,25 @@ var DefaultConfig = Config{
 				"neousdt",
 				"nexousdt",
 				"oneusdt",
-				"opusdc",
 				"opusdt",
 				"peopleusdt",
 				"renusdt",
 				"rndrusdt",
 				"rplusdt",
-				"sandusdc",
 				"sandusdt",
 				"shibusdt",
 				"snxusdt",
 				"solusdt",
 				"ssvusdt",
 				"sushiusdt",
-				"thetausdc",
 				"thetausdt",
 				"tonusdt",
-				"trxusdc",
 				"trxusdt",
 				"tusdusdt",
 				"uniusdt",
 				"usdcusdt",
-				"usddusdc",
 				"usddusdt",
 				"usdpusdt",
-				"vetusdc",
 				"vetusdt",
 				"wavesusdt",
 				"winusdt",
@@ -395,9 +382,7 @@ var DefaultConfig = Config{
 				"xecusdt",
 				"xlmusdt",
 				"xmrusdt",
-				"xrpusdc",
 				"xrpusdt",
-				"xtzusdc",
 				"xtzusdt",
 				"yfiusdt",
 				"zecusdt",
@@ -1101,6 +1086,8 @@ var DefaultConfig = Config{
 				"juno-network",
 				"stargaze",
 				"akash-network",
+				"white-whale",
+				"switcheo",
 			},
 		},
 		"osmosis": {
@@ -1337,7 +1324,6 @@ var DefaultConfig = Config{
 				"ATOM-USD",
 				"AVAX-USD",
 				"AXS-USD",
-				"BADGER-USD",
 				"BAL-USD",
 				"BAT-USD",
 				"BCH-USD",
@@ -1387,7 +1373,6 @@ var DefaultConfig = Config{
 				"PRO-USD",
 				"QNT-USD",
 				"RAD-USD",
-				"REN-USD",
 				"RLC-USD",
 				"RLY-USD",
 				"RSV-USD",
@@ -1440,6 +1425,43 @@ var DefaultConfig = Config{
 			Interval: 30,
 			Timeout:  5,
 			Symbols:  FiatCoins,
+		},
+	},
+}
+
+var DefaultAllianceConfig = AllianceConfig{
+	GRPCUrls: []string{
+		"migaloo-grpc.polkachu.com:20790",
+		"kujira-grpc.polkachu.com:11890",
+		"query-grpc.carbon.network:443",
+	},
+	LSTSData: []LSTData{
+		// Whale
+		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
+			IBCDenom:     "ibc/05238E98A143496C8AF2B6067BABC84503909ECE9E45FBCBAC2CBA5C889FD82A",
+			RebaseFactor: sdktypes.MustNewDecFromStr("1.178655688356438636"),
+		},
+		{ // BoneLuna https://chainsco.pe/terra2/address/terra17aj4ty4sz4yhgm08na8drc0v03v2jwr3waxcqrwhajj729zhl7zqnpc0ml
+			IBCDenom:     "ibc/40C29143BF4153B365089E40E437B7AA819672646C45BB0A5F1E10915A0B6708",
+			RebaseFactor: sdktypes.MustNewDecFromStr("1.066790970929921282"),
+		},
+		// Carbon
+		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
+			IBCDenom:     "ibc/62A3870B9804FC3A92EAAA1F0F3F07E089DBF76CC521466CA33F5AAA8AD42290",
+			RebaseFactor: sdktypes.MustNewDecFromStr("1.178655688356438636"),
+		},
+		{ // Stride stLuna https://app.stride.zone/
+			IBCDenom:     "ibc/FBEE20115530F474F8BBE1460DA85437C3FBBFAF4A5DEBD71CA6B9C40559A161",
+			RebaseFactor: sdktypes.MustNewDecFromStr("1.057000000000000000"),
+		},
+	},
+	LSTOnPhoenix: []LSTOnPhoenix{
+		{
+			CounterpartyChainId: "carbon-1",
+			LSTData: LSTData{
+				IBCDenom:     "ibc/random_denom",
+				RebaseFactor: sdktypes.MustNewDecFromStr("1.057000000000000000"),
+			},
 		},
 	},
 }

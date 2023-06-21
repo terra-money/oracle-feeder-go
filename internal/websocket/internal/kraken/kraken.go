@@ -43,6 +43,9 @@ func (wc *WebsocketClient) ConnectAndSubscribe(symbols []string) (*websocket.Con
 	}
 
 	command, err := generateCommand(symbols)
+	if err != nil {
+		return nil, err
+	}
 	if err := conn.WriteJSON(&command); err != nil {
 		return nil, err
 	}
@@ -64,8 +67,8 @@ func (wc *WebsocketClient) HandleMsg(msg []byte, conn *websocket.Conn) (*types.C
 			return nil, fmt.Errorf("Invalid msg: %s", string(msg))
 		}
 		if event == "heartbeat" {
-			conn.WriteJSON(map[string]interface{}{"event": "ping", "reqid": 9527})
-			return nil, nil
+			err := conn.WriteJSON(map[string]interface{}{"event": "ping", "reqid": 9527})
+			return nil, err
 		}
 		if event == "subscriptionStatus" {
 			status, ok := resp["status"].(string)
@@ -93,9 +96,7 @@ func (wc *WebsocketClient) HandleMsg(msg []byte, conn *websocket.Conn) (*types.C
 // {"event": "subscribe","pair": ["XBT/EUR"],"subscription": {"interval": 5,"name": "ohlc"}}
 func generateCommand(symbols []string) (map[string]interface{}, error) {
 	var topics []string
-	for _, symbol := range symbols {
-		topics = append(topics, symbol)
-	}
+	topics = append(topics, symbols...)
 
 	subscription := map[string]interface{}{
 		"interval": 1,
