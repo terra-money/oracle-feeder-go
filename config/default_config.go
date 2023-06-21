@@ -8,8 +8,20 @@ var DefaultPriceServerConfig = Config{
 	Port:             8532,
 	MetricsPort:      8533,
 	Sentry:           "",
-	ProviderPriority: []string{"binance", "huobi", "coingecko", "kucoin", "bitfinex", "kraken", "okx", "osmosis", "bitstamp", "bybit", "bittrex", "exchangerate", "frankfurter", "fer"},
+	ProviderPriority: []string{"astroport", "binance", "huobi", "coingecko", "kucoin", "bitfinex", "kraken", "okx", "osmosis", "bitstamp", "bybit", "bittrex", "exchangerate", "frankfurter", "fer"},
 	Providers: map[string]ProviderConfig{
+		"astroport": {
+			Interval: 30,
+			Timeout:  5,
+			Symbols: []string{
+				"ibc/08095CEDEA29977C9DD0CE9A48329FDA622C183359D5F90CF04CC4FF80CBE431-ibc/B3504E092456BA618CC28AC671A71FB08C6CA0FD0BE7C8A5B5A3E2DD933CC9E4", // stLuna  - axlUSDC
+				"ibc/08095CEDEA29977C9DD0CE9A48329FDA622C183359D5F90CF04CC4FF80CBE431-ibc/CBF67A2BCF6CAE343FDF251E510C8E18C361FC02B23430C121116E0811835DEF", // stLuna  - axlUSDT
+				"terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct-ibc/B3504E092456BA618CC28AC671A71FB08C6CA0FD0BE7C8A5B5A3E2DD933CC9E4",     // ampLuna - axlUSDC
+				"terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct-ibc/CBF67A2BCF6CAE343FDF251E510C8E18C361FC02B23430C121116E0811835DEF",     // ampLuna - axlUSDT
+				"terra17aj4ty4sz4yhgm08na8drc0v03v2jwr3waxcqrwhajj729zhl7zqnpc0ml-ibc/B3504E092456BA618CC28AC671A71FB08C6CA0FD0BE7C8A5B5A3E2DD933CC9E4",     // backboneLuna   - axlUSDC
+				"terra17aj4ty4sz4yhgm08na8drc0v03v2jwr3waxcqrwhajj729zhl7zqnpc0ml-ibc/CBF67A2BCF6CAE343FDF251E510C8E18C361FC02B23430C121116E0811835DEF",     // backboneLuna   - axlUSDT
+			},
+		},
 		"binance": {
 			Symbols: []string{
 				"BTCUSDT",
@@ -1088,6 +1100,7 @@ var DefaultPriceServerConfig = Config{
 				"akash-network",
 				"white-whale",
 				"switcheo",
+				"stride-staked-luna",
 			},
 		},
 		"osmosis": {
@@ -1438,21 +1451,21 @@ var DefaultAllianceConfig = AllianceConfig{
 	LSTSData: []LSTData{
 		// Whale
 		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
-			IBCDenom:     "ibc/05238E98A143496C8AF2B6067BABC84503909ECE9E45FBCBAC2CBA5C889FD82A",
-			RebaseFactor: sdktypes.MustNewDecFromStr("1.178655688356438636"),
+			Symbol:   "AMPLUNA",
+			IBCDenom: "ibc/05238E98A143496C8AF2B6067BABC84503909ECE9E45FBCBAC2CBA5C889FD82A",
 		},
 		{ // BoneLuna https://chainsco.pe/terra2/address/terra17aj4ty4sz4yhgm08na8drc0v03v2jwr3waxcqrwhajj729zhl7zqnpc0ml
-			IBCDenom:     "ibc/40C29143BF4153B365089E40E437B7AA819672646C45BB0A5F1E10915A0B6708",
-			RebaseFactor: sdktypes.MustNewDecFromStr("1.066790970929921282"),
+			Symbol:   "BACKBONELUNA",
+			IBCDenom: "ibc/40C29143BF4153B365089E40E437B7AA819672646C45BB0A5F1E10915A0B6708",
 		},
 		// Carbon
 		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
-			IBCDenom:     "ibc/62A3870B9804FC3A92EAAA1F0F3F07E089DBF76CC521466CA33F5AAA8AD42290",
-			RebaseFactor: sdktypes.MustNewDecFromStr("1.178655688356438636"),
+			Symbol:   "AMPLUNA",
+			IBCDenom: "ibc/62A3870B9804FC3A92EAAA1F0F3F07E089DBF76CC521466CA33F5AAA8AD42290",
 		},
 		{ // Stride stLuna https://app.stride.zone/
-			IBCDenom:     "ibc/FBEE20115530F474F8BBE1460DA85437C3FBBFAF4A5DEBD71CA6B9C40559A161",
-			RebaseFactor: sdktypes.MustNewDecFromStr("1.057000000000000000"),
+			Symbol:   "STLUNA",
+			IBCDenom: "ibc/FBEE20115530F474F8BBE1460DA85437C3FBBFAF4A5DEBD71CA6B9C40559A161",
 		},
 	},
 	LSTOnPhoenix: []LSTOnPhoenix{
@@ -1460,7 +1473,7 @@ var DefaultAllianceConfig = AllianceConfig{
 			CounterpartyChainId: "carbon-1",
 			LSTData: LSTData{
 				IBCDenom:     "ibc/random_denom",
-				RebaseFactor: sdktypes.MustNewDecFromStr("1.057000000000000000"),
+				RebaseFactor: sdktypes.ZeroDec(),
 			},
 		},
 	},

@@ -61,7 +61,9 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 	// to cache the data and avoid querying
 	// the prices each time we query the protocols info.
 	pricesRes := p.providerManager.GetPrices(ctx)
+	lstsData := p.parseLstsRebaseFactor(p.config.LSTSData, pricesRes)
 
+	// Setup Luna price
 	for _, price := range pricesRes.Prices {
 		if strings.EqualFold(price.Denom, "LUNA") {
 			luna, err := sdktypes.NewDecFromStr(strconv.FormatFloat(price.Price, 'f', -1, 64))
@@ -151,7 +153,7 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 			annualProvisionsRes.AnnualProvisions,
 		)
 
-		normalizedLunaAlliance := parseLunaAlliances(allianceParamsRes.Params, allianceRes.Alliances, p.config.LSTSData)
+		normalizedLunaAlliance := p.parseLunaAlliances(allianceParamsRes.Params, allianceRes.Alliances, lstsData)
 		alliancesOnPhoenix := p.filterAlliancesOnPhoenix(nodeRes)
 
 		protocolRes.ProtocolsInfo = append(protocolRes.ProtocolsInfo, types.NewProtocolInfo(
@@ -163,6 +165,35 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 	}
 
 	return &protocolRes, nil
+}
+func (p *allianceProvider) parseLstsRebaseFactor(configLST []config.LSTData, prices *pricetypes.PricesResponse) []config.LSTData {
+	var LUNA_USD_PRICE float64
+	var parsedLSTData = []config.LSTData{}
+
+	// Find LUNA  price
+	for _, price := range prices.Prices {
+		if strings.EqualFold(price.Denom, "LUNA") {
+			LUNA_USD_PRICE = price.Price
+		}
+	}
+
+	for i := 0; i < len(configLST); i++ {
+		for _, price := range prices.Prices {
+			if strings.EqualFold(price.Denom, configLST[i].Symbol) {
+				rebaseFactor := price.Price / LUNA_USD_PRICE
+				parsedRebaseFactor, err := sdktypes.NewDecFromStr(strconv.FormatFloat(rebaseFactor, 'f', -1, 64))
+				if err != nil {
+					fmt.Printf("parse price error for: %s %v \n", price.Denom, err)
+					return nil
+				}
+				configLST[i].RebaseFactor = parsedRebaseFactor
+				parsedLSTData = append(parsedLSTData, configLST[i])
+			}
+		}
+	}
+
+	return parsedLSTData
+
 }
 
 func (p *allianceProvider) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeInfoResponse) []types.BaseAlliance {
@@ -179,7 +210,7 @@ func (p *allianceProvider) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeIn
 	return baseAlliances
 }
 
-func parseLunaAlliances(
+func (p *allianceProvider) parseLunaAlliances(
 	allianceParams alliancetypes.Params,
 	alliances []alliancetypes.AllianceAsset,
 	lstsData []config.LSTData,

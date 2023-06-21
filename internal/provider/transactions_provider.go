@@ -15,7 +15,6 @@ import (
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
-	codecTypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -222,9 +221,9 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	return &bRes.TxResponse.TxHash, err
 }
 
-func (p *TransactionsProvider) getTxClients() (client.TxBuilder, client.TxConfig, codecTypes.InterfaceRegistry) {
+func (p *TransactionsProvider) getTxClients() (client.TxBuilder, client.TxConfig, sdktypes.InterfaceRegistry) {
 	amino := codec.NewLegacyAmino()
-	interfaceRegistry := codecTypes.NewInterfaceRegistry()
+	interfaceRegistry := sdktypes.NewInterfaceRegistry()
 	protoCodec := codec.NewProtoCodec(interfaceRegistry)
 	txConfig := tx.NewTxConfig(protoCodec, tx.DefaultSignModes)
 
