@@ -1,5 +1,6 @@
 {
     "price_server_port": "8532",
-    "oracle_address": "terra1vhndln95yd7rngslzvf6sax6axcshkxqpmpr886ntelh28p9ghuqspfswp",
-    "feeder_retries": 4
+    "oracle_address": "terra19y3kv8r4ef4wjfvw5fzqnkff8fut0f4y3lt46k4ce0a0cwpscuqqg39mvq",
+    "feeder_retries": 4,
+    "chain_id": "pisco-1"
 }

@@ -53,6 +53,11 @@ func NewTransactionsProvider() TransactionsProvider {
 		panic("ORACLE_ADDRESS env variable is not set!")
 	}
 
+	var chainId string
+	if chainId = os.Getenv("CHAIN_ID"); len(chainId) == 0 {
+		panic("ORACLE_ADDRESS env variable is not set!")
+	}
+
 	privKeyBytes, err := hd.Secp256k1.Derive()(mnemonic, "", "m/44'/330'/0'/0/0")
 	if err != nil {
 		panic(err)
@@ -65,7 +70,7 @@ func NewTransactionsProvider() TransactionsProvider {
 		nodeGrpcUrl:   nodeGrpcUrl,
 		address:       address,
 		oracleAddress: oracleAddress,
-		chainId:       "test-1",
+		chainId:       chainId,
 		prefix:        "terra",
 		denom:         "uluna",
 	}
