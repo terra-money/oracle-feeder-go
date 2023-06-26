@@ -1472,7 +1472,7 @@ var DefaultAllianceConfig = AllianceConfig{
 		{
 			CounterpartyChainId: "carbon-1",
 			LSTData: LSTData{
-				IBCDenom:     "ibc/random_denom",
+				IBCDenom:     "factory/terra1zdpgj8am5nqqvht927k3etljyl6a52kwqup0je/utest766e",
 				RebaseFactor: sdktypes.ZeroDec(),
 			},
 		},

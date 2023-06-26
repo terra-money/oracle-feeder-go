@@ -1,4 +1,4 @@
-package provider
+package alliance_provider
 
 import (
 	"context"
@@ -8,17 +8,19 @@ import (
 	"net/http"
 	"os"
 
-	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/terra-money/oracle-feeder-go/internal/provider"
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type alliancesQuerierProvider struct {
-	transactionsProvider TransactionsProvider
+	transactionsProvider provider.TransactionsProvider
 }
 
 func NewAlliancesQuerierProvider() *alliancesQuerierProvider {
 	return &alliancesQuerierProvider{
-		transactionsProvider: NewTransactionsProvider(),
+		transactionsProvider: provider.NewTransactionsProvider(),
 	}
 }
 

@@ -1,4 +1,4 @@
-package provider
+package alliance_provider
 
 import (
 	"context"
@@ -16,26 +16,28 @@ import (
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	mintypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	"github.com/terra-money/oracle-feeder-go/internal/provider"
 )
 
-type allianceProvider struct {
+type allianceProtocolsInfo struct {
 	internal.BaseGrpc
-	LSDProvider
+	provider.LSDProvider
 	config          *config.AllianceConfig
-	providerManager *ProviderManager
+	providerManager *provider.ProviderManager
 }
 
-func NewAllianceProvider(config *config.AllianceConfig, providerManager *ProviderManager) *allianceProvider {
+func NewAllianceProtocolsInfo(config *config.AllianceConfig, providerManager *provider.ProviderManager) *allianceProtocolsInfo {
 
-	return &allianceProvider{
+	return &allianceProtocolsInfo{
 		BaseGrpc:        *internal.NewBaseGrpc(),
-		LSDProvider:     *NewLSDProvider(),
+		LSDProvider:     *provider.NewLSDProvider(),
 		config:          config,
 		providerManager: providerManager,
 	}
 }
 
-func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.AllianceProtocolRes, error) {
+func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*types.AllianceProtocolRes, error) {
 	protocolRes := types.DefaultAllianceProtocolRes()
 
 	// Query the all prices at the beginning
@@ -154,7 +156,7 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 
 	return &protocolRes, nil
 }
-func (p *allianceProvider) queryRebaseFactors(configLST []config.LSTData) ([]config.LSTData, error) {
+func (p *allianceProtocolsInfo) queryRebaseFactors(configLST []config.LSTData) ([]config.LSTData, error) {
 	for i, lst := range configLST {
 		rebaseFactor, err := p.LSDProvider.QueryLSTRebaseFactor(lst.Symbol)
 		if err != nil {
@@ -168,7 +170,7 @@ func (p *allianceProvider) queryRebaseFactors(configLST []config.LSTData) ([]con
 
 }
 
-func (p *allianceProvider) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeInfoResponse) []types.BaseAlliance {
+func (p *allianceProtocolsInfo) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeInfoResponse) []types.BaseAlliance {
 	baseAlliances := []types.BaseAlliance{}
 
 	for _, allianceOnPhoenix := range p.config.LSTOnPhoenix {
@@ -182,7 +184,7 @@ func (p *allianceProvider) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeIn
 	return baseAlliances
 }
 
-func (p *allianceProvider) parseLunaAlliances(
+func (p *allianceProtocolsInfo) parseLunaAlliances(
 	allianceParams alliancetypes.Params,
 	alliances []alliancetypes.AllianceAsset,
 	lstsData []config.LSTData,

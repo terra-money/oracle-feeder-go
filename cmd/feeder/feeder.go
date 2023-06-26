@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/terra-money/oracle-feeder-go/internal/provider"
+	alliance_provider "github.com/terra-money/oracle-feeder-go/internal/provider/alliance"
 )
 
 func main() {
@@ -26,7 +26,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	alliancesQuerierProvider := provider.NewAlliancesQuerierProvider()
+	alliancesQuerierProvider := alliance_provider.NewAlliancesQuerierProvider()
 
 	for attempt := 1; attempt <= retries; attempt++ {
 		_, err := alliancesQuerierProvider.QueryAndSubmitOnChain(ctx)
