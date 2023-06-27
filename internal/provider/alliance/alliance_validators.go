@@ -114,31 +114,94 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 
 	valsWithAllianceTokens, totalAllianceStakedTokens := p.filterAllianceValsWithStake(allianceVals, smartContractRes)
 	compliantValsWithAllianceTokens,
-		nonCompliantValsWithAllianceTokens,
-		totalAllianceStakedTokensOnNonCompliantVals := p.filterAllianceValsByCompliance(compliantVals, valsWithAllianceTokens)
+		nonCompliantValsWithAllianceTokens := p.filterAllianceValsByCompliance(compliantVals, valsWithAllianceTokens)
 	avgTokensPerCompliantVal := totalAllianceStakedTokens.Quo(sdktypes.NewDec(int64(len(compliantValsWithAllianceTokens))))
 
 	redelegations := p.rebalanceVals(
 		compliantValsWithAllianceTokens,
 		nonCompliantValsWithAllianceTokens,
 		avgTokensPerCompliantVal,
-		totalAllianceStakedTokensOnNonCompliantVals,
 	)
 
 	return types.NewAllianceRedelegateReq(redelegations), nil
 }
 
 // In charge of rebalancing the stake from non-compliant validators to compliant ones.
-// - Compliant validators shouldn't have more than the average amout of stake (avgTokensPerCompVal).
 // - Non-compliant validators should end with 0 stake at the end of function execution.
+// - Compliant validators shouldn't have more than the average amout of stake (avgTokensPerCompVal).
 // - If any compliant validator has more than the average amout of stake, re-balance to other compliant validators.
 func (*allianceValidatorsProvider) rebalanceVals(
 	compVal []types.ValWithAllianceTokensStake,
 	nonCompVals []types.ValWithAllianceTokensStake,
 	avgTokensPerCompVal sdktypes.Dec,
-	tokensStakedOnNonCompVals sdktypes.Dec,
 ) []types.Redelegation {
 	redelegations := []types.Redelegation{}
+
+	// Redelegate the non-compliant validators stake
+	// until they have 0 stake.
+	for i := 0; i < len(nonCompVals); i++ {
+		nonCompValStake := nonCompVals[i].TotalStaked.Amount
+
+		// if the nonCompVal has stake remove the stake ...
+		if nonCompValStake.GT(sdktypes.ZeroDec()) {
+			// ... iterate the compliant vals to find
+			// the ones with less than avgTokensPerCompVal ...
+
+			for j := 0; j < len(compVal); j++ {
+				compValStake := compVal[j].TotalStaked.Amount
+				if compValStake.LT(avgTokensPerCompVal) {
+					// ... and calculate the delta to the average
+					deltaStakeToRebalance := avgTokensPerCompVal.Sub(compValStake)
+
+					// Append the redelegation to the list
+					redelegations = append(
+						redelegations,
+						types.NewRedelegation(
+							nonCompVals[i].ValidatorAddr,
+							compVal[j].ValidatorAddr,
+							deltaStakeToRebalance.String(),
+						),
+					)
+
+					// Update the stake of the compliant validator
+					compVal[j].TotalStaked.Amount = compValStake.Add(deltaStakeToRebalance)
+					// Update the stake of the non-compliant validator
+					nonCompVals[i].TotalStaked.Amount = nonCompValStake.Sub(deltaStakeToRebalance)
+				}
+			}
+		}
+	}
+
+	// Redelegate the compliant validators stake
+	// if any has more than the average stake.
+	for i := 0; i < len(compVal); i++ {
+		IcompValStake := compVal[i].TotalStaked.Amount
+		if IcompValStake.GT(avgTokensPerCompVal) {
+
+			for j := 0; j < len(compVal); j++ {
+				JcompValStake := compVal[j].TotalStaked.Amount
+				if JcompValStake.LT(avgTokensPerCompVal) {
+					// ... and calculate the delta to the average
+					deltaStakeToRebalance := IcompValStake.Sub(avgTokensPerCompVal)
+
+					// Append the redelegation to the list
+					redelegations = append(
+						redelegations,
+						types.NewRedelegation(
+							compVal[i].ValidatorAddr,
+							compVal[j].ValidatorAddr,
+							deltaStakeToRebalance.String(),
+						),
+					)
+
+					// Update the stake of the validator with more stake than the average
+					compVal[j].TotalStaked.Amount = JcompValStake.Add(deltaStakeToRebalance)
+					// Update the stake of the validator with less stake than the average
+					compVal[i].TotalStaked.Amount = IcompValStake.Sub(deltaStakeToRebalance)
+				}
+			}
+		}
+	}
 
 	return redelegations
 }
@@ -146,13 +209,12 @@ func (*allianceValidatorsProvider) rebalanceVals(
 // Method to split the list of alliance validators in two subsets:
 //   - compliantValsWithAllianceTokens: comply with the rules described below the method GetAllianceRedelegateReq,
 //   - nonCompliantValsWithAllianceTokens: the ones that does not complie with the rules,
-//
-// It also counts how much stake has been delegated to the non
-// compliant validators and returns the amout of stake that should be rebalanced
-func (*allianceValidatorsProvider) filterAllianceValsByCompliance(compliantVals []stakingtypes.Validator, valsWithAllianceTokens []types.ValWithAllianceTokensStake) ([]types.ValWithAllianceTokensStake, []types.ValWithAllianceTokensStake, sdktypes.Dec) {
+func (*allianceValidatorsProvider) filterAllianceValsByCompliance(
+	compliantVals []stakingtypes.Validator,
+	valsWithAllianceTokens []types.ValWithAllianceTokensStake,
+) ([]types.ValWithAllianceTokensStake, []types.ValWithAllianceTokensStake) {
 	compliantValsWithAllianceTokens := []types.ValWithAllianceTokensStake{}
 	nonCompliantValsWithAllianceTokens := []types.ValWithAllianceTokensStake{}
-	totalAllianceStakedTokensOnNonCompliantVals := sdktypes.ZeroDec()
 
 	for _, valWithAllianceTokensStake := range valsWithAllianceTokens {
 		found := false
@@ -173,11 +235,10 @@ func (*allianceValidatorsProvider) filterAllianceValsByCompliance(compliantVals 
 				nonCompliantValsWithAllianceTokens,
 				valWithAllianceTokensStake,
 			)
-			totalAllianceStakedTokensOnNonCompliantVals = totalAllianceStakedTokensOnNonCompliantVals.Add(valWithAllianceTokensStake.TotalStaked.Amount)
 		}
 	}
 
-	return compliantValsWithAllianceTokens, nonCompliantValsWithAllianceTokens, totalAllianceStakedTokensOnNonCompliantVals
+	return compliantValsWithAllianceTokens, nonCompliantValsWithAllianceTokens
 }
 
 // Filter the alliance validators to keep only the ones that have staked ualliance tokens
