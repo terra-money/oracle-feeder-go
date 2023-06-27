@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/terra-money/oracle-feeder-go/config"
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
@@ -33,7 +34,6 @@ type allianceValidatorsProvider struct {
 }
 
 func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManager *provider.ProviderManager) *allianceValidatorsProvider {
-
 	var nodeGrpcUrl string
 	if nodeGrpcUrl = os.Getenv("NODE_GRPC_URL"); len(nodeGrpcUrl) == 0 {
 		panic("NODE_GRPC_URL env variable is not set!")
@@ -43,10 +43,12 @@ func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManage
 	if stationApiUrl = os.Getenv("STATION_API"); len(stationApiUrl) == 0 {
 		panic("STATION_API env variable is not set!")
 	}
+
 	var allianceHubContractAddress string
 	if allianceHubContractAddress = os.Getenv("ALLIANCE_HUB_CONTRACT_ADDRESS"); len(allianceHubContractAddress) == 0 {
 		panic("ALLIANCE_HUB_CONTRACT_ADDRESS env variable is not set!")
 	}
+
 	return &allianceValidatorsProvider{
 		BaseGrpc:                   *internal.NewBaseGrpc(),
 		config:                     config,
@@ -117,7 +119,7 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 		nonCompliantValsWithAllianceTokens := p.filterAllianceValsByCompliance(compliantVals, valsWithAllianceTokens)
 	avgTokensPerCompliantVal := totalAllianceStakedTokens.Quo(sdktypes.NewDec(int64(len(compliantValsWithAllianceTokens))))
 
-	redelegations := p.rebalanceVals(
+	redelegations := RebalanceVals(
 		compliantValsWithAllianceTokens,
 		nonCompliantValsWithAllianceTokens,
 		avgTokensPerCompliantVal,
@@ -128,12 +130,12 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 
 // In charge of rebalancing the stake from non-compliant validators to compliant ones.
 // - Non-compliant validators should end with 0 stake at the end of function execution.
-// - Compliant validators shouldn't have more than the average amout of stake (avgTokensPerCompVal).
+// - Compliant validators shouldn't have more than the average amout of stake (avgTokensPerComplVal).
 // - If any compliant validator has more than the average amout of stake, re-balance to other compliant validators.
-func (*allianceValidatorsProvider) rebalanceVals(
+func RebalanceVals(
 	compVal []types.ValWithAllianceTokensStake,
 	nonCompVals []types.ValWithAllianceTokensStake,
-	avgTokensPerCompVal sdktypes.Dec,
+	avgTokensPerComplVal sdktypes.Dec,
 ) []types.Redelegation {
 	redelegations := []types.Redelegation{}
 
@@ -145,13 +147,19 @@ func (*allianceValidatorsProvider) rebalanceVals(
 		// if the nonCompVal has stake remove the stake ...
 		if nonCompValStake.GT(sdktypes.ZeroDec()) {
 			// ... iterate the compliant vals to find
-			// the ones with less than avgTokensPerCompVal ...
+			// the ones with less than avgTokensPerComplVal ...
 
 			for j := 0; j < len(compVal); j++ {
 				compValStake := compVal[j].TotalStaked.Amount
-				if compValStake.LT(avgTokensPerCompVal) {
-					// ... and calculate the delta to the average
-					deltaStakeToRebalance := avgTokensPerCompVal.Sub(compValStake)
+				if compValStake.LT(avgTokensPerComplVal) {
+					// ... calculate the delta to the average
+					deltaStakeToRebalance := avgTokensPerComplVal.Sub(compValStake)
+
+					// If the delta is greater than the stake of the non-compliant validator
+					// use all the stake of the non-compliant validator
+					if deltaStakeToRebalance.GT(nonCompValStake) {
+						deltaStakeToRebalance = nonCompValStake
+					}
 
 					// Append the redelegation to the list
 					redelegations = append(
@@ -159,7 +167,8 @@ func (*allianceValidatorsProvider) rebalanceVals(
 						types.NewRedelegation(
 							nonCompVals[i].ValidatorAddr,
 							compVal[j].ValidatorAddr,
-							deltaStakeToRebalance.String(),
+							// Since the operations are done with Decimals, we need to remove the decimal part https://github.com/terra-money/alliance/issues/227
+							strings.Split(deltaStakeToRebalance.String(), ".")[0],
 						),
 					)
 
@@ -176,13 +185,13 @@ func (*allianceValidatorsProvider) rebalanceVals(
 	// if any has more than the average stake.
 	for i := 0; i < len(compVal); i++ {
 		IcompValStake := compVal[i].TotalStaked.Amount
-		if IcompValStake.GT(avgTokensPerCompVal) {
+		if IcompValStake.GT(avgTokensPerComplVal) {
 
 			for j := 0; j < len(compVal); j++ {
 				JcompValStake := compVal[j].TotalStaked.Amount
-				if JcompValStake.LT(avgTokensPerCompVal) {
+				if JcompValStake.LT(avgTokensPerComplVal) {
 					// ... and calculate the delta to the average
-					deltaStakeToRebalance := IcompValStake.Sub(avgTokensPerCompVal)
+					deltaStakeToRebalance := IcompValStake.Sub(avgTokensPerComplVal)
 
 					// Append the redelegation to the list
 					redelegations = append(
@@ -190,7 +199,8 @@ func (*allianceValidatorsProvider) rebalanceVals(
 						types.NewRedelegation(
 							compVal[i].ValidatorAddr,
 							compVal[j].ValidatorAddr,
-							deltaStakeToRebalance.String(),
+							// Since the operations are done with Decimals, we need to remove the decimal part https://github.com/terra-money/alliance/issues/227
+							strings.Split(deltaStakeToRebalance.String(), ".")[0],
 						),
 					)
 
