@@ -1,5 +1,12 @@
 {
-    "price_server_port": "8532",
-    "oracle_address": "terra1vhndln95yd7rngslzvf6sax6axcshkxqpmpr886ntelh28p9ghuqspfswp",
-    "feeder_retries": 4
+    "main": {
+        "price_server_port": "8532",
+        "oracle_address": "terra1vhndln95yd7rngslzvf6sax6axcshkxqpmpr886ntelh28p9ghuqspfswp",
+        "feeder_retries": 4
+    },
+    "develop": {
+        "price_server_port": "8532",
+        "oracle_address": "terra1vhndln95yd7rngslzvf6sax6axcshkxqpmpr886ntelh28p9ghuqspfswp",
+        "feeder_retries": 4
+    }
 }
