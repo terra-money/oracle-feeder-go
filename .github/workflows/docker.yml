@@ -30,15 +30,19 @@ jobs:
 
       - name: Parse refs.json
         id: parse-refs
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
         run: |
           # Install jq to parse JSON
           sudo apt-get update
           sudo apt-get install -y jq
 
-          # Parse refs.json and extract the required information
-          ORACLE_ADDRESS=$(jq -r '.oracle_address' params.json)
-          PRICE_SERVER_PORT=$(jq -r '.price_server_port' params.json)
-          FEEDER_RETRIES=$(jq -r '.feeder_retries' params.json)
+          # Determine the branch name
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+
+          # Parse params.json and extract the required information
+          ORACLE_ADDRESS=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].oracle_address' params.json)
+          PRICE_SERVER_PORT=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].price_server_port' params.json)
+          FEEDER_RETRIES=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].feeder_retries' params.json)
 
           # Set output parameters for subsequent jobs
           echo "::set-output name=oracle_address::$ORACLE_ADDRESS"
