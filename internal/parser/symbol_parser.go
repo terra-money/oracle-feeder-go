@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/astroport"
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/binance"
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/bitfinex"
 	"github.com/terra-money/oracle-feeder-go/internal/parser/internal/bitstamp"
@@ -21,6 +22,8 @@ import (
 // can be parsed to the same pair `BTC/USDT`.
 func ParseSymbol(exhcange string, symbol string) (string, string, error) {
 	switch strings.ToLower(exhcange) {
+	case "astroport":
+		return astroport.ParseSymbol(symbol)
 	case "binance":
 		return binance.ParseSymbol(symbol)
 	case "bitfinex":

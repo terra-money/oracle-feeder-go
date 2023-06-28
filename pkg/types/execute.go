@@ -19,3 +19,18 @@ func NewMsgUpdateChainsInfo(data types.AllianceProtocolRes) MsgUpdateChainsInfo 
 		},
 	}
 }
+
+type AllianceRedelegate struct {
+	Redelegations []types.Redelegation `json:"redelegations"`
+}
+type MsgAllianceRedelegate struct {
+	AllianceRedelegate AllianceRedelegate `json:"alliance_redelegate"`
+}
+
+func NewMsgAllianceRedelegate(redelegations []types.Redelegation) MsgAllianceRedelegate {
+	return MsgAllianceRedelegate{
+		AllianceRedelegate: AllianceRedelegate{
+			Redelegations: redelegations,
+		},
+	}
+}

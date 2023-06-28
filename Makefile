@@ -3,8 +3,11 @@
 #################################################
 ###                   START                   ###
 #################################################
-start-feeder:
-	go run ./cmd/feeder/feeder.go
+start-alliance-oracle-feeder:
+	go run ./cmd/feeder/feeder.go alliance-oracle-feeder
+
+start-alliance-rebalance-feeder:
+	go run ./cmd/feeder/feeder.go alliance-rebalance-feeder
 
 start-price-server:
 	go run ./cmd/price-server/price_server.go
