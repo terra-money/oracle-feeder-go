@@ -16,22 +16,6 @@ func NewRedelegation(srcValidator string, dstValidator string, amount string) Re
 	}
 }
 
-type AllianceRedelegate struct {
-	Redelegations []Redelegation `json:"redelegations"`
-}
-
-type AllianceRedelegateReq struct {
-	AllianceRedelegate AllianceRedelegate `json:"alliance_redelegate"`
-}
-
-func NewAllianceRedelegateReq(redelegations []Redelegation) *AllianceRedelegateReq {
-	return &AllianceRedelegateReq{
-		AllianceRedelegate: AllianceRedelegate{
-			Redelegations: redelegations,
-		},
-	}
-}
-
 type ValWithAllianceTokensStake struct {
 	ValidatorAddr string
 	TotalStaked   types.DecCoin

@@ -10,6 +10,7 @@ import (
 	"github.com/terra-money/oracle-feeder-go/config"
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
+	pkgtypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 	pricetypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
@@ -37,7 +38,7 @@ func NewAllianceProtocolsInfo(config *config.AllianceConfig, providerManager *pr
 	}
 }
 
-func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*types.AllianceProtocolRes, error) {
+func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes.MsgUpdateChainsInfo, error) {
 	protocolRes := types.DefaultAllianceProtocolRes()
 
 	// Query the all prices at the beginning
@@ -153,8 +154,9 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*types.Al
 			alliancesOnPhoenix,
 		))
 	}
+	res := pkgtypes.NewMsgUpdateChainsInfo(protocolRes)
 
-	return &protocolRes, nil
+	return &res, nil
 }
 func (p *allianceProtocolsInfo) queryRebaseFactors(configLST []config.LSTData) ([]config.LSTData, error) {
 	for i, lst := range configLST {

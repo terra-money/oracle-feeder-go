@@ -13,6 +13,7 @@ import (
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
+	pkgtypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
@@ -67,8 +68,7 @@ func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManage
 // (3) - commission rate to be lower than 19%,
 // (4) - Participate in the latest 3 gov proposals,
 // (5) - have been in the active validator set 100 000 blocks before the current one, (1 week approx)
-func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Context) (*types.AllianceRedelegateReq, error) {
-
+func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Context) (*pkgtypes.MsgAllianceRedelegate, error) {
 	smartContractRes, err := p.querySmartContractConfig(ctx)
 	if err != nil {
 		return nil, err
@@ -125,7 +125,9 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 		avgTokensPerCompliantVal,
 	)
 
-	return types.NewAllianceRedelegateReq(redelegations), nil
+	res := pkgtypes.NewMsgAllianceRedelegate(redelegations)
+
+	return &res, nil
 }
 
 // In charge of rebalancing the stake from non-compliant validators to compliant ones.
@@ -355,7 +357,7 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 
 	govPropsRes, err := govClient.Proposals(ctx, &govtypes.QueryProposalsRequest{
 		Pagination: &query.PageRequest{
-			Limit:   30,
+			Limit:   3,
 			Reverse: true,
 		},
 	})
@@ -445,5 +447,5 @@ func atLeastThreeOccurrences(stationVotes []types.StationVote, val string) bool 
 			count++
 		}
 	}
-	return count >= 1
+	return count >= 3
 }

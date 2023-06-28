@@ -2,7 +2,6 @@ package alliance_provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -10,30 +9,26 @@ import (
 
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
-
-	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type alliancesQuerierProvider struct {
+	feederType           types.FeederType
 	transactionsProvider provider.TransactionsProvider
 }
 
-func NewAlliancesQuerierProvider() *alliancesQuerierProvider {
+func NewAlliancesQuerierProvider(feederType types.FeederType) *alliancesQuerierProvider {
 	return &alliancesQuerierProvider{
-		transactionsProvider: provider.NewTransactionsProvider(),
+		feederType:           feederType,
+		transactionsProvider: provider.NewTransactionsProvider(feederType),
 	}
 }
 
-func (a alliancesQuerierProvider) QueryAndSubmitOnChain(ctx context.Context) (res *types.AllianceProtocolRes, err error) {
-	res, err = a.RequestData()
+func (a alliancesQuerierProvider) QueryAndSubmitOnChain(ctx context.Context) (res []byte, err error) {
+	res, err = a.requestData()
 	if err != nil {
 		return nil, fmt.Errorf("ERROR requesting alliances data %w", err)
 	}
-	msg, err := a.transactionsProvider.ParseAlliancesTransaction(res)
-	if err != nil {
-		return nil, fmt.Errorf("ERROR parsing alliances data %w", err)
-	}
-	txHash, err := a.transactionsProvider.SubmitAlliancesTransaction(ctx, []sdk.Msg{msg})
+	txHash, err := a.transactionsProvider.SubmitAlliancesTransaction(ctx, res)
 	if err != nil {
 		return nil, fmt.Errorf("ERROR submitting alliances data on chain %w", err)
 	}
@@ -42,13 +37,13 @@ func (a alliancesQuerierProvider) QueryAndSubmitOnChain(ctx context.Context) (re
 	return res, nil
 }
 
-func (alliancesQuerierProvider) RequestData() (res *types.AllianceProtocolRes, err error) {
+func (a alliancesQuerierProvider) requestData() (res []byte, err error) {
 	var url string
 	if url = os.Getenv("PRICE_SERVER_URL"); len(url) == 0 {
 		url = "http://localhost:8532"
 	}
 	// Send GET request
-	resp, err := http.Get(url + "/alliance/protocol")
+	resp, err := http.Get(url + types.FromFeederTypeToPriceServerUrl(a.feederType))
 	if err != nil {
 		return nil, err
 	}
@@ -60,12 +55,6 @@ func (alliancesQuerierProvider) RequestData() (res *types.AllianceProtocolRes, e
 		return nil, err
 	}
 
-	// Parse JSON response into struct
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		return nil, err
-	}
-
 	// Access parsed data
-	return res, nil
+	return body, nil
 }
