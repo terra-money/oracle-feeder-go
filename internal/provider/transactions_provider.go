@@ -2,14 +2,12 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/tendermint/tmlibs/bech32"
 	"github.com/terra-money/oracle-feeder-go/internal/types"
-	pkgtypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
@@ -28,16 +26,20 @@ import (
 )
 
 type TransactionsProvider struct {
-	privKey       cryptoTypes.PrivKey
-	nodeGrpcUrl   string
-	oracleAddress string
-	address       sdk.AccAddress
-	prefix        string
-	denom         string
-	chainId       string
+	privKey                    cryptoTypes.PrivKey
+	nodeGrpcUrl                string
+	oracleAddress              string
+	allianceHubContractAddress string
+	address                    sdk.AccAddress
+	prefix                     string
+	denom                      string
+	chainId                    string
+	feederType                 types.FeederType
 }
 
-func NewTransactionsProvider() TransactionsProvider {
+func NewTransactionsProvider(
+	feederType types.FeederType,
+) TransactionsProvider {
 	var mnemonic string
 	if mnemonic = os.Getenv("MNEMONIC"); len(mnemonic) == 0 {
 		panic("MNEMONIC env variable is not set!")
@@ -53,6 +55,11 @@ func NewTransactionsProvider() TransactionsProvider {
 		panic("ORACLE_ADDRESS env variable is not set!")
 	}
 
+	var allianceHubContractAddress string
+	if allianceHubContractAddress = os.Getenv("ALLIANCE_HUB_CONTRACT_ADDRESS"); len(allianceHubContractAddress) == 0 {
+		panic("ALLIANCE_HUB_CONTRACT_ADDRESS env variable is not set!")
+	}
+
 	var chainId string
 	if chainId = os.Getenv("CHAIN_ID"); len(chainId) == 0 {
 		panic("ORACLE_ADDRESS env variable is not set!")
@@ -66,42 +73,36 @@ func NewTransactionsProvider() TransactionsProvider {
 	privKey := hd.Secp256k1.Generate()(privKeyBytes)
 	address := sdk.AccAddress(privKey.PubKey().Address())
 	return TransactionsProvider{
-		privKey:       privKey,
-		nodeGrpcUrl:   nodeGrpcUrl,
-		address:       address,
-		oracleAddress: oracleAddress,
-		chainId:       chainId,
-		prefix:        "terra",
-		denom:         "uluna",
+		privKey:                    privKey,
+		nodeGrpcUrl:                nodeGrpcUrl,
+		address:                    address,
+		oracleAddress:              oracleAddress,
+		allianceHubContractAddress: allianceHubContractAddress,
+		feederType:                 feederType,
+		chainId:                    chainId,
+		prefix:                     "terra",
+		denom:                      "uluna",
 	}
-}
-func (p *TransactionsProvider) ParseAlliancesTransaction(protocolRes *types.AllianceProtocolRes) (msg sdk.Msg, err error) {
-	bech32Addr, err := bech32.ConvertAndEncode(p.prefix, p.address)
-	if err != nil {
-		return msg, err
-	}
-
-	executeMsg := pkgtypes.NewMsgUpdateChainsInfo(*protocolRes)
-	executeB, err := json.Marshal(executeMsg)
-	if err != nil {
-		return msg, err
-	}
-
-	fmt.Println("Submitting transaction with account: ", bech32Addr)
-	// This needs to be a smart contract send execution
-	msg = &wasmtypes.MsgExecuteContract{
-		Sender:   bech32Addr,
-		Contract: p.oracleAddress,
-		Msg:      executeB,
-		Funds:    nil,
-	}
-	return msg, nil
 }
 
 func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	ctx context.Context,
-	msgs []sdk.Msg,
+	msg []byte,
 ) (string, error) {
+	// Get the bech address and...
+	bech32Addr, err := bech32.ConvertAndEncode(p.prefix, p.address)
+	if err != nil {
+		return "", err
+	}
+	// ... build the messages to be signed
+	msgs := []sdk.Msg{
+		&wasmtypes.MsgExecuteContract{
+			Sender:   bech32Addr,
+			Contract: p.getContractAddress(),
+			Msg:      msg,
+			Funds:    nil,
+		},
+	}
 	var account authTypes.AccountI
 	txBuilder, txConfig, interfaceRegistry := p.getTxClients()
 
@@ -253,4 +254,15 @@ func (p *TransactionsProvider) getRPCConnection(nodeUrl string, interfaceRegistr
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec())),
 	)
+}
+
+func (p *TransactionsProvider) getContractAddress() string {
+	switch p.feederType {
+	case types.AllianceOracleFeeder:
+		return p.oracleAddress
+	case types.AllianceRebalanceFeeder:
+		return p.allianceHubContractAddress
+	}
+
+	panic("Unknown feeder type")
 }

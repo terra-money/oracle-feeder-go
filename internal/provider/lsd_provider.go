@@ -8,9 +8,10 @@ import (
 	"net/http"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	"github.com/terra-money/oracle-feeder-go/internal/types"
+
+	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
 type LSDProvider struct {
@@ -116,5 +117,4 @@ func (p *LSDProvider) queryStLunaRebaseFactor() (*sdk.Dec, error) {
 	}
 
 	return &res.HostZone.RedemptionRate, nil
-
 }

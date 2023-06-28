@@ -10,6 +10,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/terra-money/oracle-feeder-go/config"
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
+	alliance_provider "github.com/terra-money/oracle-feeder-go/internal/provider/alliance"
 )
 
 func main() {
@@ -21,7 +22,7 @@ func main() {
 
 	stopCh := make(chan struct{})
 	manager := provider.NewProviderManager(&config.DefaultPriceServerConfig, stopCh)
-	allianceProvider := provider.NewAllianceProvider(&config.DefaultAllianceConfig, manager)
+	allianceProvider := alliance_provider.NewAllianceProvider(&config.DefaultAllianceConfig, manager)
 
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) {
@@ -38,6 +39,14 @@ func main() {
 			return
 		}
 		c.JSON(http.StatusOK, allianceProtocolRes)
+	})
+	r.GET("/alliance/rebalance", func(c *gin.Context) {
+		allianceRebalanceVals, err := allianceProvider.GetAllianceRedelegateReq(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, err)
+			return
+		}
+		c.JSON(http.StatusOK, allianceRebalanceVals)
 	})
 	if os.Getenv("PRICE_SERVER_PORT") == "" {
 		os.Setenv("PORT", "8532") // use 8532 by default
