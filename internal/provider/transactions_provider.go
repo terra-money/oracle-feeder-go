@@ -2,20 +2,17 @@ package provider
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"os"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/tendermint/tmlibs/bech32"
 	"github.com/terra-money/oracle-feeder-go/internal/types"
-	pkgtypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
-	codecTypes "github.com/cosmos/cosmos-sdk/codec/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/codec/types"
 	"github.com/cosmos/cosmos-sdk/crypto/hd"
 	cryptoTypes "github.com/cosmos/cosmos-sdk/crypto/types"
@@ -29,16 +26,20 @@ import (
 )
 
 type TransactionsProvider struct {
-	privKey       cryptoTypes.PrivKey
-	nodeGrpcUrl   string
-	oracleAddress string
-	address       sdk.AccAddress
-	prefix        string
-	denom         string
-	chainId       string
+	privKey                    cryptoTypes.PrivKey
+	nodeGrpcUrl                string
+	oracleAddress              string
+	allianceHubContractAddress string
+	address                    sdk.AccAddress
+	prefix                     string
+	denom                      string
+	chainId                    string
+	feederType                 types.FeederType
 }
 
-func NewTransactionsProvider() TransactionsProvider {
+func NewTransactionsProvider(
+	feederType types.FeederType,
+) TransactionsProvider {
 	var mnemonic string
 	if mnemonic = os.Getenv("MNEMONIC"); len(mnemonic) == 0 {
 		panic("MNEMONIC env variable is not set!")
@@ -54,6 +55,16 @@ func NewTransactionsProvider() TransactionsProvider {
 		panic("ORACLE_ADDRESS env variable is not set!")
 	}
 
+	var allianceHubContractAddress string
+	if allianceHubContractAddress = os.Getenv("ALLIANCE_HUB_CONTRACT_ADDRESS"); len(allianceHubContractAddress) == 0 {
+		panic("ALLIANCE_HUB_CONTRACT_ADDRESS env variable is not set!")
+	}
+
+	var chainId string
+	if chainId = os.Getenv("CHAIN_ID"); len(chainId) == 0 {
+		panic("ORACLE_ADDRESS env variable is not set!")
+	}
+
 	privKeyBytes, err := hd.Secp256k1.Derive()(mnemonic, "", "m/44'/330'/0'/0/0")
 	if err != nil {
 		panic(err)
@@ -61,57 +72,50 @@ func NewTransactionsProvider() TransactionsProvider {
 
 	privKey := hd.Secp256k1.Generate()(privKeyBytes)
 	address := sdk.AccAddress(privKey.PubKey().Address())
-
 	return TransactionsProvider{
-		privKey:       privKey,
-		nodeGrpcUrl:   nodeGrpcUrl,
-		address:       address,
-		oracleAddress: oracleAddress,
-		chainId:       "pisco-1",
-		prefix:        "terra",
-		denom:         "uluna",
+		privKey:                    privKey,
+		nodeGrpcUrl:                nodeGrpcUrl,
+		address:                    address,
+		oracleAddress:              oracleAddress,
+		allianceHubContractAddress: allianceHubContractAddress,
+		feederType:                 feederType,
+		chainId:                    chainId,
+		prefix:                     "terra",
+		denom:                      "uluna",
 	}
-}
-func (p *TransactionsProvider) ParseAlliancesTransaction(protocolRes *types.AllianceProtocolRes) (msg sdk.Msg, err error) {
-	bech32Addr, err := bech32.ConvertAndEncode(p.prefix, p.address)
-	if err != nil {
-		return msg, err
-	}
-
-	executeMsg := pkgtypes.NewMsgUpdateChainsInfo(*protocolRes)
-	executeB, err := json.Marshal(executeMsg)
-	if err != nil {
-		return msg, err
-	}
-
-	fmt.Printf("%s", executeB)
-	// This needs to be a smart contract send execution
-	msg = &wasmtypes.MsgExecuteContract{
-		Sender:   bech32Addr,
-		Contract: p.oracleAddress,
-		Msg:      executeB,
-		Funds:    nil,
-	}
-	return msg, nil
 }
 
 func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	ctx context.Context,
-	msgs []sdk.Msg,
-) (*string, error) {
-	var faucetAccount authTypes.AccountI
+	msg []byte,
+) (string, error) {
+	// Get the bech address and...
+	bech32Addr, err := bech32.ConvertAndEncode(p.prefix, p.address)
+	if err != nil {
+		return "", err
+	}
+	// ... build the messages to be signed
+	msgs := []sdk.Msg{
+		&wasmtypes.MsgExecuteContract{
+			Sender:   bech32Addr,
+			Contract: p.getContractAddress(),
+			Msg:      msg,
+			Funds:    nil,
+		},
+	}
+	var account authTypes.AccountI
 	txBuilder, txConfig, interfaceRegistry := p.getTxClients()
 
 	// create gRPC connection
 	grpcConn, err := p.getRPCConnection(p.nodeGrpcUrl, interfaceRegistry)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	defer grpcConn.Close()
 
 	fromAddress, err := bech32.ConvertAndEncode(p.prefix, p.address)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	authClient := authTypes.NewQueryClient(grpcConn)
@@ -119,21 +123,21 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 		Address: fromAddress,
 	})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
-	err = interfaceRegistry.UnpackAny(accRes.Account, &faucetAccount)
+	err = interfaceRegistry.UnpackAny(accRes.Account, &account)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	accSeq := faucetAccount.GetSequence()
+	accSeq := account.GetSequence()
 
 	pubKey := p.privKey.PubKey()
 	signMode := txConfig.SignModeHandler().DefaultMode()
 
 	signerData := signing.SignerData{
 		ChainID:       p.chainId,
-		AccountNumber: faucetAccount.GetAccountNumber(),
+		AccountNumber: account.GetAccountNumber(),
 		Sequence:      accSeq,
 	}
 	sigData := txsigning.SingleSignatureData{
@@ -149,25 +153,25 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	// build txn
 	err = txBuilder.SetMsgs(msgs...)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	err = txBuilder.SetSignatures(sigv2)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// simulate transaction to get gas cost and see if it will fail
 	simulateBytes, err := txConfig.TxEncoder()(txBuilder.GetTx())
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	queryClient := txTypes.NewServiceClient(grpcConn)
 	simRes, err := queryClient.Simulate(ctx, &txTypes.SimulateRequest{
 		TxBytes: simulateBytes,
 	})
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// set the gas needed with some allowance
@@ -178,17 +182,17 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 
 	txBuilder.SetGasLimit(uint64(float64(gasUsed) * 1.5))
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// sign the final message with the private key
 	bytesToSign, err := txConfig.SignModeHandler().GetSignBytes(signMode, signerData, txBuilder.GetTx())
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	sig, err := p.privKey.Sign(bytesToSign)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	sigData = txsigning.SingleSignatureData{
 		SignMode:  signMode,
@@ -201,13 +205,13 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	}
 	err = txBuilder.SetSignatures(sigv2)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	// encode and broadcast transaction
 	txBytes, err := txConfig.TxEncoder()(txBuilder.GetTx())
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	// Increase cached account sequence before broadcasting tx
 	bRes, err := queryClient.BroadcastTx(ctx,
@@ -217,14 +221,17 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 		},
 	)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
-	return &bRes.TxResponse.TxHash, err
+	if bRes.TxResponse.Code != 0 {
+		return "", fmt.Errorf("tx failed with code %d, %s", bRes.TxResponse.Code, bRes.TxResponse.RawLog)
+	}
+	return bRes.TxResponse.TxHash, err
 }
 
-func (p *TransactionsProvider) getTxClients() (client.TxBuilder, client.TxConfig, codecTypes.InterfaceRegistry) {
+func (p *TransactionsProvider) getTxClients() (client.TxBuilder, client.TxConfig, sdktypes.InterfaceRegistry) {
 	amino := codec.NewLegacyAmino()
-	interfaceRegistry := codecTypes.NewInterfaceRegistry()
+	interfaceRegistry := sdktypes.NewInterfaceRegistry()
 	protoCodec := codec.NewProtoCodec(interfaceRegistry)
 	txConfig := tx.NewTxConfig(protoCodec, tx.DefaultSignModes)
 
@@ -247,4 +254,15 @@ func (p *TransactionsProvider) getRPCConnection(nodeUrl string, interfaceRegistr
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec())),
 	)
+}
+
+func (p *TransactionsProvider) getContractAddress() string {
+	switch p.feederType {
+	case types.AllianceOracleFeeder:
+		return p.oracleAddress
+	case types.AllianceRebalanceFeeder:
+		return p.allianceHubContractAddress
+	}
+
+	panic("Unknown feeder type")
 }

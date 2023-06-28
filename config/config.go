@@ -25,6 +25,7 @@ type AllianceConfig struct {
 }
 
 type LSTData struct {
+	Symbol       string
 	IBCDenom     string       `json:"ibcDenom,omitempty"`
 	RebaseFactor sdktypes.Dec `json:"rebaseFactor,omitempty"`
 }

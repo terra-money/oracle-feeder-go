@@ -112,8 +112,6 @@ func averagePriceByCoin(prices map[string]types.PriceByPair) map[string]float64 
 			if quotePrice, ok := prices[quoteUSD]; ok && quotePrice.Price > 0.0 {
 				coinSum[priceByPair.Base] += priceByPair.Price * quotePrice.Price
 				coinCount[priceByPair.Base] += 1.0
-			} else {
-				println("line 106 ", quoteUSD)
 			}
 		}
 	}
