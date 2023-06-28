@@ -1,7 +1,6 @@
 package alliance_provider_test
 
 import (
-	"sort"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -49,7 +48,6 @@ func TestRebalanceMultipleVal(t *testing.T) {
 
 	// WHEN
 	redelegations := alliance_provider.RebalanceVals(compVal, nonCompVals, avgTokensPerCompVal)
-	sortByVals(redelegations)
 
 	// THEN
 	require.Equal(t, 4, len(redelegations))
@@ -75,11 +73,48 @@ func TestRebalanceMultipleVal(t *testing.T) {
 	}, redelegations[3])
 }
 
-func sortByVals(redelegations []types.Redelegation) {
-	sort.Slice(redelegations, func(i, j int) bool {
-		if redelegations[i].SrcValidator == redelegations[j].SrcValidator {
-			return redelegations[i].DstValidator < redelegations[j].DstValidator
-		}
-		return redelegations[i].SrcValidator < redelegations[j].SrcValidator
-	})
+func TestRebalanceMultipleVal2(t *testing.T) {
+	// GIVEN
+	compVal := []types.ValWithAllianceTokensStake{
+		{ValidatorAddr: "val1", TotalStaked: sdk.NewDecCoinFromDec("token", sdk.NewDec(40))},
+		{ValidatorAddr: "val2", TotalStaked: sdk.NewDecCoinFromDec("token", sdk.NewDec(2))},
+		{ValidatorAddr: "val3", TotalStaked: sdk.NewDecCoinFromDec("token", sdk.NewDec(4))},
+	}
+	nonCompVals := []types.ValWithAllianceTokensStake{
+		{ValidatorAddr: "val4", TotalStaked: sdk.NewDecCoinFromDec("token", sdk.NewDec(5))},
+		{ValidatorAddr: "val5", TotalStaked: sdk.NewDecCoinFromDec("token", sdk.NewDec(5))},
+		{ValidatorAddr: "val6", TotalStaked: sdk.NewDecCoinFromDec("token", sdk.NewDec(4))},
+	}
+	avgTokensPerCompVal := sdk.NewDec(20)
+
+	// WHEN
+	redelegations := alliance_provider.RebalanceVals(compVal, nonCompVals, avgTokensPerCompVal)
+
+	// THEN
+	require.Equal(t, 5, len(redelegations))
+	require.Equal(t, types.Redelegation{
+		SrcValidator: "val4",
+		DstValidator: "val2",
+		Amount:       "5",
+	}, redelegations[0])
+	require.Equal(t, types.Redelegation{
+		SrcValidator: "val5",
+		DstValidator: "val2",
+		Amount:       "5",
+	}, redelegations[1])
+	require.Equal(t, types.Redelegation{
+		SrcValidator: "val6",
+		DstValidator: "val2",
+		Amount:       "4",
+	}, redelegations[2])
+	require.Equal(t, types.Redelegation{
+		SrcValidator: "val1",
+		DstValidator: "val2",
+		Amount:       "4",
+	}, redelegations[3])
+	require.Equal(t, types.Redelegation{
+		SrcValidator: "val1",
+		DstValidator: "val3",
+		Amount:       "16",
+	}, redelegations[4])
 }

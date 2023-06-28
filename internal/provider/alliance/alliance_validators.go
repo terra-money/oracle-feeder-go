@@ -186,30 +186,40 @@ func RebalanceVals(
 	// if any has more than the average stake.
 	for i := 0; i < len(compVal); i++ {
 		IcompValStake := compVal[i].TotalStaked.Amount
-		if IcompValStake.GT(avgTokensPerComplVal) {
+		for j := 0; j < len(compVal); j++ {
+			// break if the src validator has less than or equal to the average stake
+			if IcompValStake.LTE(avgTokensPerComplVal) {
+				break
+			}
+			JcompValStake := compVal[j].TotalStaked.Amount
+			if JcompValStake.LT(avgTokensPerComplVal) {
+				// ... and calculate the delta to the average
+				diffNeededByDstVal := avgTokensPerComplVal.Sub(JcompValStake)
+				diffAvailableBySrcVal := IcompValStake.Sub(avgTokensPerComplVal)
 
-			for j := 0; j < len(compVal); j++ {
-				JcompValStake := compVal[j].TotalStaked.Amount
-				if JcompValStake.LT(avgTokensPerComplVal) {
-					// ... and calculate the delta to the average
-					deltaStakeToRebalance := IcompValStake.Sub(avgTokensPerComplVal)
-
-					// Append the redelegation to the list
-					redelegations = append(
-						redelegations,
-						types.NewRedelegation(
-							compVal[i].ValidatorAddr,
-							compVal[j].ValidatorAddr,
-							// Since the operations are done with Decimals, we need to remove the decimal part https://github.com/terra-money/alliance/issues/227
-							strings.Split(deltaStakeToRebalance.String(), ".")[0],
-						),
-					)
-
-					// Update the stake of the validator with more stake than the average
-					compVal[j].TotalStaked.Amount = JcompValStake.Add(deltaStakeToRebalance)
-					// Update the stake of the validator with less stake than the average
-					compVal[i].TotalStaked.Amount = IcompValStake.Sub(deltaStakeToRebalance)
+				// Take the minimum between the two
+				var deltaStakeToRebalance sdktypes.Dec
+				if diffNeededByDstVal.GT(diffAvailableBySrcVal) {
+					deltaStakeToRebalance = diffAvailableBySrcVal
+				} else {
+					deltaStakeToRebalance = diffNeededByDstVal
 				}
+
+				// Append the redelegation to the list
+				redelegations = append(
+					redelegations,
+					types.NewRedelegation(
+						compVal[i].ValidatorAddr,
+						compVal[j].ValidatorAddr,
+						// Since the operations are done with Decimals, we need to remove the decimal part https://github.com/terra-money/alliance/issues/227
+						strings.Split(deltaStakeToRebalance.String(), ".")[0],
+					),
+				)
+
+				// Update the stake of the validator with more stake than the average
+				compVal[j].TotalStaked.Amount = JcompValStake.Add(deltaStakeToRebalance)
+				// Update the stake of the validator with less stake than the average
+				compVal[i].TotalStaked.Amount = IcompValStake.Sub(deltaStakeToRebalance)
 			}
 		}
 	}
