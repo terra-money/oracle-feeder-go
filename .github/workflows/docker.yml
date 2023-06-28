@@ -30,20 +30,27 @@ jobs:
 
       - name: Parse refs.json
         id: parse-refs
+        if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
         run: |
           # Install jq to parse JSON
           sudo apt-get update
           sudo apt-get install -y jq
 
-          # Parse refs.json and extract the required information
-          ORACLE_ADDRESS=$(jq -r '.oracle_address' params.json)
-          PRICE_SERVER_PORT=$(jq -r '.price_server_port' params.json)
-          FEEDER_RETRIES=$(jq -r '.feeder_retries' params.json)
+          # Determine the branch name
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+
+          # Parse params.json and extract the required information
+          ORACLE_ADDRESS=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].oracle_address' params.json)
+          ALLIANCE_HUB_CONTRACT_ADDRESS=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].alliance_hub_contract_address' params.json)
+          PRICE_SERVER_PORT=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].price_server_port' params.json)
+          FEEDER_RETRIES=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].feeder_retries' params.json)
 
           # Set output parameters for subsequent jobs
           echo "::set-output name=oracle_address::$ORACLE_ADDRESS"
+          echo "::set-output name=alliance_hub_contract_address::$ALLIANCE_HUB_CONTRACT_ADDRESS"
           echo "::set-output name=price_server_port::$PRICE_SERVER_PORT"
           echo "::set-output name=feeder_retries::$FEEDER_RETRIES"
+
   build:
     runs-on: ubuntu-latest
     permissions:
@@ -94,6 +101,7 @@ jobs:
             type=semver,pattern={{tag}}
             type=semver,pattern={{version}}
             type=raw,value=latest,event=branch,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+            type=raw,value=main,event=branch,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
             type=raw,value=develop,event=branch,enable=${{ github.ref == format('refs/heads/{0}', 'develop') }}
 
       - name: Build docker image
@@ -136,4 +144,4 @@ jobs:
           ref: ${{ env.TF_GITHUB_REF }}
           workflow: Terraform
           token: ${{ secrets.TFL_GITHUB_TOKEN }}
-          inputs: '{ "ORACLE_ADDRESS": "${{ needs.refs-parsing.outputs.oracle_address }}", "PRICE_SERVER_PORT": "${{needs.refs-parsing.outputs.price_server_port}}", "FEEDER_RETRIES": "${{needs.refs-parsing.outputs.feeder_retries}}", "TAG": "${{env.TAG}}"  }'
+          inputs: '{ "ALLIANCE_HUB_CONTRACT_ADDRESS": "${{ needs.refs-parsing.outputs.alliance_hub_contract_address }}", "ORACLE_ADDRESS": "${{ needs.refs-parsing.outputs.oracle_address }}", "PRICE_SERVER_PORT": "${{needs.refs-parsing.outputs.price_server_port}}", "FEEDER_RETRIES": "${{needs.refs-parsing.outputs.feeder_retries}}", "TAG": "${{env.TAG}}"  }'
