@@ -145,38 +145,39 @@ func RebalanceVals(
 		nonCompValStake := nonCompVals[i].TotalStaked.Amount
 
 		// if the nonCompVal has stake remove the stake ...
-		if nonCompValStake.GT(sdktypes.ZeroDec()) {
-			// ... iterate the compliant vals to find
-			// the ones with less than avgTokensPerComplVal ...
+		// ... iterate the compliant vals to find
+		// the ones with less than avgTokensPerComplVal ...
 
-			for j := 0; j < len(compVal); j++ {
-				compValStake := compVal[j].TotalStaked.Amount
-				if compValStake.LT(avgTokensPerComplVal) {
-					// ... calculate the delta to the average
-					deltaStakeToRebalance := avgTokensPerComplVal.Sub(compValStake)
+		for j := 0; j < len(compVal); j++ {
+			if nonCompValStake.IsZero() {
+				break
+			}
+			compValStake := compVal[j].TotalStaked.Amount
+			if compValStake.LT(avgTokensPerComplVal) {
+				// ... calculate the delta to the average
+				deltaStakeToRebalance := avgTokensPerComplVal.Sub(compValStake)
 
-					// If the delta is greater than the stake of the non-compliant validator
-					// use all the stake of the non-compliant validator
-					if deltaStakeToRebalance.GT(nonCompValStake) {
-						deltaStakeToRebalance = nonCompValStake
-					}
-
-					// Append the redelegation to the list
-					redelegations = append(
-						redelegations,
-						types.NewRedelegation(
-							nonCompVals[i].ValidatorAddr,
-							compVal[j].ValidatorAddr,
-							// Since the operations are done with Decimals, we need to remove the decimal part https://github.com/terra-money/alliance/issues/227
-							strings.Split(deltaStakeToRebalance.String(), ".")[0],
-						),
-					)
-
-					// Update the stake of the compliant validator
-					compVal[j].TotalStaked.Amount = compValStake.Add(deltaStakeToRebalance)
-					// Update the stake of the non-compliant validator
-					nonCompVals[i].TotalStaked.Amount = nonCompValStake.Sub(deltaStakeToRebalance)
+				// If the delta is greater than the stake of the non-compliant validator
+				// use all the stake of the non-compliant validator
+				if deltaStakeToRebalance.GT(nonCompValStake) {
+					deltaStakeToRebalance = nonCompValStake
 				}
+
+				// Append the redelegation to the list
+				redelegations = append(
+					redelegations,
+					types.NewRedelegation(
+						nonCompVals[i].ValidatorAddr,
+						compVal[j].ValidatorAddr,
+						// Since the operations are done with Decimals, we need to remove the decimal part https://github.com/terra-money/alliance/issues/227
+						strings.Split(deltaStakeToRebalance.String(), ".")[0],
+					),
+				)
+
+				// Update the stake of the compliant validator
+				compVal[j].TotalStaked.Amount = compValStake.Add(deltaStakeToRebalance)
+				// Update the stake of the non-compliant validator
+				nonCompValStake = nonCompValStake.Sub(deltaStakeToRebalance)
 			}
 		}
 	}

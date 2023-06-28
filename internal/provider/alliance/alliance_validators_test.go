@@ -1,6 +1,7 @@
 package alliance_provider_test
 
 import (
+	"sort"
 	"testing"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -48,6 +49,7 @@ func TestRebalanceMultipleVal(t *testing.T) {
 
 	// WHEN
 	redelegations := alliance_provider.RebalanceVals(compVal, nonCompVals, avgTokensPerCompVal)
+	sortByVals(redelegations)
 
 	// THEN
 	require.Equal(t, 4, len(redelegations))
@@ -71,4 +73,13 @@ func TestRebalanceMultipleVal(t *testing.T) {
 		DstValidator: "val3",
 		Amount:       "4",
 	}, redelegations[3])
+}
+
+func sortByVals(redelegations []types.Redelegation) {
+	sort.Slice(redelegations, func(i, j int) bool {
+		if redelegations[i].SrcValidator == redelegations[j].SrcValidator {
+			return redelegations[i].DstValidator < redelegations[j].DstValidator
+		}
+		return redelegations[i].SrcValidator < redelegations[j].SrcValidator
+	})
 }
