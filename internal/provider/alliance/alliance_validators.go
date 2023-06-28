@@ -114,10 +114,10 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 		compliantVals = append(compliantVals, val)
 	}
 
-	valsWithAllianceTokens, totalAllianceStakedTokens := p.filterAllianceValsWithStake(allianceVals, smartContractRes)
+	valsWithAllianceTokens, totalAllianceStakedTokens := FilterAllianceValsWithStake(allianceVals, smartContractRes.AllianceTokenDenom)
 	compliantValsWithAllianceTokens,
-		nonCompliantValsWithAllianceTokens := p.filterAllianceValsByCompliance(compliantVals, valsWithAllianceTokens)
-	avgTokensPerCompliantVal := totalAllianceStakedTokens.Quo(sdktypes.NewDec(int64(len(compliantValsWithAllianceTokens))))
+		nonCompliantValsWithAllianceTokens := ParseAllianceValsByCompliance(compliantVals, valsWithAllianceTokens, smartContractRes.AllianceTokenDenom)
+	avgTokensPerCompliantVal := totalAllianceStakedTokens.Quo(sdktypes.NewDec(int64(len(compliantVals))))
 
 	redelegations := RebalanceVals(
 		compliantValsWithAllianceTokens,
@@ -224,29 +224,44 @@ func RebalanceVals(
 }
 
 // Method to split the list of alliance validators in two subsets:
-//   - compliantValsWithAllianceTokens: comply with the rules described below the method GetAllianceRedelegateReq,
-//   - nonCompliantValsWithAllianceTokens: the ones that does not complie with the rules,
-func (*allianceValidatorsProvider) filterAllianceValsByCompliance(
+//
+//   - compliantValsWithAllianceTokens: validatos that comply with the rules
+//     described below the method GetAllianceRedelegateReq with the stake to zero if has no stake.
+//
+//   - nonCompliantValsWithAllianceTokens: the ones that does not complie with the rules
+//     in this subset should never exist validators with zero stake,
+func ParseAllianceValsByCompliance(
 	compliantVals []stakingtypes.Validator,
 	valsWithAllianceTokens []types.ValWithAllianceTokensStake,
+	allianceTokenDenom string,
 ) ([]types.ValWithAllianceTokensStake, []types.ValWithAllianceTokensStake) {
 	compliantValsWithAllianceTokens := []types.ValWithAllianceTokensStake{}
 	nonCompliantValsWithAllianceTokens := []types.ValWithAllianceTokensStake{}
 
+	// Parse the **compliantVals** to the type **ValWithAllianceTokensStake**
+	// if they have no stake initialize the stake to 0.
+	for _, val := range compliantVals {
+		compliantValsWithAllianceTokens = append(
+			compliantValsWithAllianceTokens,
+			types.ValWithAllianceTokensStake{
+				ValidatorAddr: val.OperatorAddress,
+				TotalStaked:   sdktypes.NewDecCoinFromDec(allianceTokenDenom, sdktypes.ZeroDec()),
+			},
+		)
+	}
+
+	// Update the stake of the compliant validators since it was initialized to 0
+	// and populate the list of the non-compliant validators.
 	for _, valWithAllianceTokensStake := range valsWithAllianceTokens {
 		found := false
-
-		for _, val := range compliantVals {
-
-			if val.OperatorAddress == valWithAllianceTokensStake.ValidatorAddr {
-				compliantValsWithAllianceTokens = append(
-					compliantValsWithAllianceTokens,
-					valWithAllianceTokensStake,
-				)
+		for i := 0; i < len(compliantValsWithAllianceTokens); i++ {
+			if compliantValsWithAllianceTokens[i].ValidatorAddr == valWithAllianceTokensStake.ValidatorAddr {
+				compliantValsWithAllianceTokens[i].TotalStaked = valWithAllianceTokensStake.TotalStaked
 				found = true
 				continue
 			}
 		}
+
 		if !found {
 			nonCompliantValsWithAllianceTokens = append(
 				nonCompliantValsWithAllianceTokens,
@@ -259,7 +274,7 @@ func (*allianceValidatorsProvider) filterAllianceValsByCompliance(
 }
 
 // Filter the alliance validators to keep only the ones that have staked ualliance tokens
-func (*allianceValidatorsProvider) filterAllianceValsWithStake(allianceVals []alliancetypes.QueryAllianceValidatorResponse, smartContractRes *types.AllianceHubConfigData) ([]types.ValWithAllianceTokensStake, sdktypes.Dec) {
+func FilterAllianceValsWithStake(allianceVals []alliancetypes.QueryAllianceValidatorResponse, allianceTokenDenom string) ([]types.ValWithAllianceTokensStake, sdktypes.Dec) {
 	valsWithAllianceTokens := []types.ValWithAllianceTokensStake{}
 	uallianceStakedTokens := sdktypes.ZeroDec()
 
@@ -268,7 +283,7 @@ func (*allianceValidatorsProvider) filterAllianceValsWithStake(allianceVals []al
 			// As soon as we find the first entry with the alliance token denom
 			// we can append the validator to the list and break the loop
 			// because it represents all the ualliance tokens staked to that validator
-			if stake.Denom == smartContractRes.AllianceTokenDenom {
+			if stake.Denom == allianceTokenDenom {
 				valsWithAllianceTokens = append(
 					valsWithAllianceTokens,
 					types.NewValWithAllianceTokensStake(val.ValidatorAddr, stake),
@@ -340,7 +355,7 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 
 	govPropsRes, err := govClient.Proposals(ctx, &govtypes.QueryProposalsRequest{
 		Pagination: &query.PageRequest{
-			Limit:   3,
+			Limit:   30,
 			Reverse: true,
 		},
 	})
@@ -399,8 +414,9 @@ func (p *allianceValidatorsProvider) getProposalsVotesFromStationAPI(ctx context
 }
 
 func (p allianceValidatorsProvider) queryStation(propId uint64) (res *[]types.StationVote, err error) {
+	url := p.stationApiUrl + "/proposals/" + fmt.Sprint(propId)
 	// Send GET request
-	resp, err := http.Get(p.stationApiUrl + "/proposals/" + fmt.Sprint(propId))
+	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
 	}
@@ -429,5 +445,5 @@ func atLeastThreeOccurrences(stationVotes []types.StationVote, val string) bool 
 			count++
 		}
 	}
-	return count >= 3
+	return count >= 1
 }
