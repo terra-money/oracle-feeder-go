@@ -142,13 +142,9 @@ func RebalanceVals(
 	// Redelegate the non-compliant validators stake
 	// until they have 0 stake.
 	for i := 0; i < len(nonCompVals); i++ {
-		nonCompValStake := nonCompVals[i].TotalStaked.Amount
-
-		// if the nonCompVal has stake remove the stake ...
-		// ... iterate the compliant vals to find
-		// the ones with less than avgTokensPerComplVal ...
 
 		for j := 0; j < len(compVal); j++ {
+			nonCompValStake := nonCompVals[i].TotalStaked.Amount
 			if nonCompValStake.IsZero() {
 				break
 			}
@@ -177,7 +173,7 @@ func RebalanceVals(
 				// Update the stake of the compliant validator
 				compVal[j].TotalStaked.Amount = compValStake.Add(deltaStakeToRebalance)
 				// Update the stake of the non-compliant validator
-				nonCompValStake = nonCompValStake.Sub(deltaStakeToRebalance)
+				nonCompVals[i].TotalStaked.Amount = nonCompValStake.Sub(deltaStakeToRebalance)
 			}
 		}
 	}
@@ -185,8 +181,8 @@ func RebalanceVals(
 	// Redelegate the compliant validators stake
 	// if any has more than the average stake.
 	for i := 0; i < len(compVal); i++ {
-		IcompValStake := compVal[i].TotalStaked.Amount
 		for j := 0; j < len(compVal); j++ {
+			IcompValStake := compVal[i].TotalStaked.Amount
 			// break if the src validator has less than or equal to the average stake
 			if IcompValStake.LTE(avgTokensPerComplVal) {
 				break
