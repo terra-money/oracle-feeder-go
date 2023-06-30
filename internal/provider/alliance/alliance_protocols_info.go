@@ -1,4 +1,4 @@
-package provider
+package alliance_provider
 
 import (
 	"context"
@@ -8,53 +8,37 @@ import (
 
 	alliancetypes "github.com/terra-money/alliance/x/alliance/types"
 	"github.com/terra-money/oracle-feeder-go/config"
+	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
+	pkgtypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 	pricetypes "github.com/terra-money/oracle-feeder-go/pkg/types"
-	"google.golang.org/grpc"
-
-	"crypto/tls"
-
-	"google.golang.org/grpc/credentials"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
-	"github.com/cosmos/cosmos-sdk/codec"
-	sdk "github.com/cosmos/cosmos-sdk/codec/types"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	mintypes "github.com/cosmos/cosmos-sdk/x/mint/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
+
+	"github.com/terra-money/oracle-feeder-go/internal/provider"
 )
 
-type allianceProvider struct {
+type allianceProtocolsInfo struct {
+	internal.BaseGrpc
+	provider.LSDProvider
 	config          *config.AllianceConfig
-	providerManager *ProviderManager
+	providerManager *provider.ProviderManager
 }
 
-func NewAllianceProvider(config *config.AllianceConfig, providerManager *ProviderManager) *allianceProvider {
+func NewAllianceProtocolsInfo(config *config.AllianceConfig, providerManager *provider.ProviderManager) *allianceProtocolsInfo {
 
-	return &allianceProvider{
+	return &allianceProtocolsInfo{
+		BaseGrpc:        *internal.NewBaseGrpc(),
+		LSDProvider:     *provider.NewLSDProvider(),
 		config:          config,
 		providerManager: providerManager,
 	}
 }
 
-func (p *allianceProvider) getRPCConnection(nodeUrl string, interfaceRegistry sdk.InterfaceRegistry) (*grpc.ClientConn, error) {
-	var authCredentials = grpc.WithTransportCredentials(insecure.NewCredentials())
-
-	if strings.Contains(nodeUrl, "carbon") {
-		authCredentials = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
-	}
-
-	return grpc.Dial(
-		nodeUrl,
-		authCredentials,
-		grpc.WithDefaultCallOptions(
-			grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec()),
-			grpc.MaxCallRecvMsgSize(1024*1024*16), // 16MB
-		))
-}
-
-func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.AllianceProtocolRes, error) {
+func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes.MsgUpdateChainsInfo, error) {
 	protocolRes := types.DefaultAllianceProtocolRes()
 
 	// Query the all prices at the beginning
@@ -62,6 +46,15 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 	// the prices each time we query the protocols info.
 	pricesRes := p.providerManager.GetPrices(ctx)
 
+	// Given the default list of LSTSData this method
+	// queries the blockchain for the rebase factor of the LSD.
+	lstsData, err := p.queryRebaseFactors(p.config.LSTSData)
+	if err != nil {
+		fmt.Printf("queryRebaseFactors: %v \n", err)
+		return nil, err
+	}
+
+	// Setup Luna price
 	for _, price := range pricesRes.Prices {
 		if strings.EqualFold(price.Denom, "LUNA") {
 			luna, err := sdktypes.NewDecFromStr(strconv.FormatFloat(price.Price, 'f', -1, 64))
@@ -76,7 +69,7 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 	// Iterate over all configured nodes in the config file,
 	// create a grpcConnection to each node and query the required data.
 	for _, grpcUrl := range p.config.GRPCUrls {
-		grpcConn, err := p.getRPCConnection(grpcUrl, nil)
+		grpcConn, err := p.BaseGrpc.Connection(grpcUrl, nil)
 		if err != nil {
 			return nil, err
 		}
@@ -151,7 +144,7 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 			annualProvisionsRes.AnnualProvisions,
 		)
 
-		normalizedLunaAlliance := parseLunaAlliances(allianceParamsRes.Params, allianceRes.Alliances, p.config.LSTSData)
+		normalizedLunaAlliance := p.parseLunaAlliances(allianceParamsRes.Params, allianceRes.Alliances, lstsData)
 		alliancesOnPhoenix := p.filterAlliancesOnPhoenix(nodeRes)
 
 		protocolRes.ProtocolsInfo = append(protocolRes.ProtocolsInfo, types.NewProtocolInfo(
@@ -161,11 +154,25 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.Allianc
 			alliancesOnPhoenix,
 		))
 	}
+	res := pkgtypes.NewMsgUpdateChainsInfo(protocolRes)
 
-	return &protocolRes, nil
+	return &res, nil
+}
+func (p *allianceProtocolsInfo) queryRebaseFactors(configLST []config.LSTData) ([]config.LSTData, error) {
+	for i, lst := range configLST {
+		rebaseFactor, err := p.LSDProvider.QueryLSTRebaseFactor(lst.Symbol)
+		if err != nil {
+			fmt.Printf("queryRebaseFactors: %v \n", err)
+			continue
+		}
+		configLST[i].RebaseFactor = *rebaseFactor
+	}
+
+	return configLST, nil
+
 }
 
-func (p *allianceProvider) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeInfoResponse) []types.BaseAlliance {
+func (p *allianceProtocolsInfo) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeInfoResponse) []types.BaseAlliance {
 	baseAlliances := []types.BaseAlliance{}
 
 	for _, allianceOnPhoenix := range p.config.LSTOnPhoenix {
@@ -179,7 +186,7 @@ func (p *allianceProvider) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeIn
 	return baseAlliances
 }
 
-func parseLunaAlliances(
+func (p *allianceProtocolsInfo) parseLunaAlliances(
 	allianceParams alliancetypes.Params,
 	alliances []alliancetypes.AllianceAsset,
 	lstsData []config.LSTData,
@@ -234,17 +241,17 @@ func calculateNormalizedRewardWeight(
 	alliances []alliancetypes.AllianceAsset,
 	alliance alliancetypes.AllianceAsset,
 ) sdktypes.Dec {
-	// When TakeRateClaimInterval is zero it means that users are not
-	// receiving any rewards so NormalizedRewardWeight is zero (right now).
-	if params.TakeRateClaimInterval == 0 {
-		return sdktypes.ZeroDec()
-	}
 
 	// We shouldd consider that reward weight
 	// starts at one because it also takes in
 	// consideration the OneDec.
 	rewardsWeight := sdktypes.OneDec()
 	for _, alliance := range alliances {
+		// When an alliance is not initialized, it means that users are not
+		// receiving rewards so NormalizedRewardWeight is zero (right now).
+		if !alliance.IsInitialized {
+			return sdktypes.ZeroDec()
+		}
 		// If an alliance is not initialized it means that
 		// rewards are not distributed to that alliance so
 		// it has a reward weight of zero.

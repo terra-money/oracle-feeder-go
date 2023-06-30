@@ -9,10 +9,12 @@ import (
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/terra-money/oracle-feeder-go/internal/provider"
+	alliance_provider "github.com/terra-money/oracle-feeder-go/internal/provider/alliance"
+	"github.com/terra-money/oracle-feeder-go/internal/types"
 )
 
 func main() {
+	// Load the environment variables
 	err := godotenv.Load()
 	if err != nil {
 		log.Print("Error loading .env file:", err)
@@ -24,9 +26,17 @@ func main() {
 			log.Fatal("Error parsing FEEDER_RETRIES:", err)
 		}
 	}
+	// Read the cli arguments
+	if len(os.Args) != 2 || os.Args[1] == "" {
+		log.Fatal(`Specify the first argument as the feeder type.`)
+	}
+	feederType, err := types.ParseFeederTypeFromString(os.Args[1])
+	if err != nil {
+		log.Fatal(err)
+	}
 
 	ctx := context.Background()
-	alliancesQuerierProvider := provider.NewAlliancesQuerierProvider()
+	alliancesQuerierProvider := alliance_provider.NewAlliancesQuerierProvider(feederType)
 
 	for attempt := 1; attempt <= retries; attempt++ {
 		_, err := alliancesQuerierProvider.QueryAndSubmitOnChain(ctx)

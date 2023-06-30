@@ -21,7 +21,7 @@ func NewProvider(exchange string, config *config.ProviderConfig, stopCh <-chan s
 	switch strings.ToLower(exchange) {
 	case "binance", "bitfinex", "bybit", "coinbase", "huobi", "kraken", "kucoin", "okx":
 		return internal.NewWebsocketProvider(exchange, config.Symbols, stopCh)
-	case "bitstamp", "bittrex", "coingecko", "exchangerate", "fer", "frankfurter":
+	case "astroport", "bitstamp", "bittrex", "coingecko", "exchangerate", "fer", "frankfurter":
 		return internal.NewRESTfulProvider(exchange, config.Symbols, config.Interval, config.Timeout, stopCh)
 	case "osmosis":
 		return osmosis.NewOsmosisProvider(config, stopCh)

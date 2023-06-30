@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/terra-money/oracle-feeder-go/internal/restful/internal/astroport"
 	"github.com/terra-money/oracle-feeder-go/internal/restful/internal/bitstamp"
 	"github.com/terra-money/oracle-feeder-go/internal/restful/internal/bittrex"
 	"github.com/terra-money/oracle-feeder-go/internal/restful/internal/coingecko"
@@ -20,6 +21,8 @@ type restfulClient interface {
 func NewRESTfulClient(exchange string, symbols []string) (restfulClient, error) {
 	var client restfulClient
 	switch strings.ToLower(exchange) {
+	case "astroport":
+		client = astroport.NewAstroportClient()
 	case "bitstamp":
 		client = bitstamp.NewBitstampClient()
 	case "bittrex":
