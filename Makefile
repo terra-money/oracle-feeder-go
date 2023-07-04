@@ -12,7 +12,7 @@ start-alliance-rebalance-feeder:
 start-price-server:
 	go run ./cmd/price-server/price_server.go
 
-.PHONY: start-feeder start-price-server
+.PHONY: start-alliance-oracle-feeder start-alliance-rebalance-feeder start-price-server
 
 
 #################################################
