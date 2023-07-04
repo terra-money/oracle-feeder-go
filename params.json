@@ -3,16 +3,12 @@
         "price_server_port": "8532",
         "oracle_address": "",
         "alliance_hub_contract_address": "",
-        "feeder_retries": 4,
-        "chain_id": "phoenix-1
-        "station_api": "https://phoenix-api.terra.dev"
+        "feeder_retries": 4
     },
     "develop": {
         "price_server_port": "8532",
-        "oracle_address": "terra19y3kv8r4ef4wjfvw5fzqnkff8fut0f4y3lt46k4ce0a0cwpscuqqg39mvq",
+        "oracle_address": "terra1jf3nndysevley5p3wnajkjvjxcql9d00gpj4en3xwp7yrkrdqess48rr27",
         "alliance_hub_contract_address" : "terra1majrm6e6n0eg760n9fs4g5jvwzh4ytp8e2d99mfgzv2e7mjmdwxse0ty73",
-        "feeder_retries": 4,
-        "chain_id": "pisco-1",
-        "station_api": "https://pisco-api.terra.dev"
+        "feeder_retries": 4
     }
 }
