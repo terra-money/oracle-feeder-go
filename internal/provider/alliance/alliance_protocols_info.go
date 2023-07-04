@@ -241,17 +241,17 @@ func calculateNormalizedRewardWeight(
 	alliances []alliancetypes.AllianceAsset,
 	alliance alliancetypes.AllianceAsset,
 ) sdktypes.Dec {
-	// When TakeRateClaimInterval is zero it means that users are not
-	// receiving any rewards so NormalizedRewardWeight is zero (right now).
-	if params.TakeRateClaimInterval == 0 {
-		return sdktypes.ZeroDec()
-	}
 
 	// We shouldd consider that reward weight
 	// starts at one because it also takes in
 	// consideration the OneDec.
 	rewardsWeight := sdktypes.OneDec()
 	for _, alliance := range alliances {
+		// When an alliance is not initialized, it means that users are not
+		// receiving rewards so NormalizedRewardWeight is zero (right now).
+		if !alliance.IsInitialized {
+			return sdktypes.ZeroDec()
+		}
 		// If an alliance is not initialized it means that
 		// rewards are not distributed to that alliance so
 		// it has a reward weight of zero.
