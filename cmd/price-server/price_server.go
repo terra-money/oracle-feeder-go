@@ -34,6 +34,7 @@ func main() {
 	})
 	r.GET("/alliance/protocol", func(c *gin.Context) {
 		allianceProtocolRes, err := allianceProvider.GetProtocolsInfo(ctx)
+		allianceProtocolRes.UpdateChainsInfo.ChainsInfo.ProtocolsInfo[0].ChainId = "narwhal-1"
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, err)
 			return
