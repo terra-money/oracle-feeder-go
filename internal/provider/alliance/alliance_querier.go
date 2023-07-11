@@ -2,13 +2,16 @@ package alliance_provider
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
 
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
+	pkgtypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 )
 
 type alliancesQuerierProvider struct {
@@ -35,6 +38,19 @@ func (a alliancesQuerierProvider) QueryAndSubmitOnChain(ctx context.Context) (re
 
 	fmt.Printf("Transaction Submitted successfully txHash: %s \n", txHash)
 	return res, nil
+}
+
+func (a alliancesQuerierProvider) SubmitOnChain(ctx context.Context) (datxHashta string, err error) {
+	var sdkMsg wasmtypes.RawContractMessage
+
+	switch a.feederType {
+	case types.AllianceHubRebalanceEmissions:
+		sdkMsg, _ = json.Marshal(pkgtypes.MsgRebalanceEmissions{})
+	case types.AllianceHubUpdateRewards:
+		sdkMsg, _ = json.Marshal(pkgtypes.MsgUpdateRewards{})
+	}
+
+	return a.transactionsProvider.SubmitAlliancesTransaction(ctx, sdkMsg)
 }
 
 func (a alliancesQuerierProvider) requestData() (res []byte, err error) {
