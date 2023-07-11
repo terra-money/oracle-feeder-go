@@ -1445,7 +1445,7 @@ var DefaultPriceServerConfig = Config{
 var DefaultAllianceConfig = AllianceConfig{
 	GRPCUrls: []string{
 		"migaloo-grpc.polkachu.com:20790",
-		// "kujira-grpc.polkachu.com:11890",
+		"kujira-grpc.polkachu.com:11890",
 		"query-grpc.carbon.network:443",
 	},
 	LSTSData: []LSTData{
@@ -1473,7 +1473,21 @@ var DefaultAllianceConfig = AllianceConfig{
 			CounterpartyChainId: "migaloo-1",
 			LSTData: LSTData{
 				IBCDenom:     "ibc/623CD0B9778AD974713317EA0438A0CCAA72AF0BBE7BEE002205BCA25F1CA3BA",
-				RebaseFactor: sdktypes.OneDec(),
+				RebaseFactor: sdktypes.MustNewDecFromStr("1.04"),
+			},
+		},
+		{
+			CounterpartyChainId: "migaloo-1",
+			LSTData: LSTData{
+				IBCDenom:     "factory/terra1zdpgj8am5nqqvht927k3etljyl6a52kwqup0je/stDeck",
+				RebaseFactor: sdktypes.MustNewDecFromStr("1.01"),
+			},
+		},
+		{
+			CounterpartyChainId: "carbon-1",
+			LSTData: LSTData{
+				IBCDenom:     "factory/terra1zdpgj8am5nqqvht927k3etljyl6a52kwqup0je/stOracle",
+				RebaseFactor: sdktypes.MustNewDecFromStr("1.07"),
 			},
 		},
 	},

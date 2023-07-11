@@ -39,10 +39,10 @@ func main() {
 	alliancesQuerierProvider := alliance_provider.NewAlliancesQuerierProvider(feederType)
 
 	for attempt := 1; attempt <= retries; attempt++ {
-		_, err := alliancesQuerierProvider.QueryAndSubmitOnChain(ctx)
+		txHash, err := alliancesQuerierProvider.SubmitTx(ctx)
 
 		if err == nil {
-			// Code executed successfully
+			fmt.Printf("Transaction Submitted successfully txHash: %s \n", txHash)
 			break
 		} else {
 			// Code execution failed

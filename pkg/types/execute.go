@@ -34,3 +34,11 @@ func NewMsgAllianceRedelegate(redelegations []types.Redelegation) MsgAllianceRed
 		},
 	}
 }
+
+type MsgUpdateRewards struct {
+	UpdateRewards struct{} `json:"update_rewards"`
+}
+
+type MsgRebalanceEmissions struct {
+	RebalanceEmissions struct{} `json:"rebalance_emissions"`
+}
