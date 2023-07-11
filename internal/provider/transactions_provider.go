@@ -257,12 +257,13 @@ func (p *TransactionsProvider) getRPCConnection(nodeUrl string, interfaceRegistr
 }
 
 func (p *TransactionsProvider) getContractAddress() string {
-	switch p.feederType {
-	case types.AllianceOracleFeeder:
-		return p.oracleAddress
-	case types.AllianceRebalanceFeeder:
+	if p.feederType == types.AllianceUpdateRewards ||
+		p.feederType == types.AllianceRebalanceEmissions ||
+		p.feederType == types.AllianceRebalanceFeeder {
 		return p.allianceHubContractAddress
+	} else if p.feederType == types.AllianceOracleFeeder {
+		return p.oracleAddress
 	}
 
-	panic("Unknown feeder type")
+	panic("Unknown feeder type " + p.feederType)
 }

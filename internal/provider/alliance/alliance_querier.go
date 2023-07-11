@@ -26,27 +26,34 @@ func NewAlliancesQuerierProvider(feederType types.FeederType) *alliancesQuerierP
 	}
 }
 
-func (a alliancesQuerierProvider) QueryAndSubmitOnChain(ctx context.Context) (res []byte, err error) {
-	res, err = a.requestData()
+func (a alliancesQuerierProvider) SubmitTx(ctx context.Context) (string, error) {
+	if a.feederType == types.AllianceOracleFeeder ||
+		a.feederType == types.AllianceRebalanceFeeder {
+		return a.QueryAndSubmitOnChain(ctx)
+	}
+
+	return a.SubmitOnChain(ctx)
+}
+
+func (a alliancesQuerierProvider) QueryAndSubmitOnChain(ctx context.Context) (string, error) {
+	res, err := a.requestData()
 	if err != nil {
-		return nil, fmt.Errorf("ERROR requesting alliances data %w", err)
+		return "", fmt.Errorf("ERROR requesting alliances data %w", err)
 	}
 	txHash, err := a.transactionsProvider.SubmitAlliancesTransaction(ctx, res)
 	if err != nil {
-		return nil, fmt.Errorf("ERROR submitting alliances data on chain %w", err)
+		return "", fmt.Errorf("ERROR submitting alliances data on chain %w", err)
 	}
-
-	fmt.Printf("Transaction Submitted successfully txHash: %s \n", txHash)
-	return res, nil
+	return txHash, nil
 }
 
-func (a alliancesQuerierProvider) SubmitOnChain(ctx context.Context) (datxHashta string, err error) {
+func (a alliancesQuerierProvider) SubmitOnChain(ctx context.Context) (string, error) {
 	var sdkMsg wasmtypes.RawContractMessage
 
 	switch a.feederType {
-	case types.AllianceHubRebalanceEmissions:
+	case types.AllianceRebalanceEmissions:
 		sdkMsg, _ = json.Marshal(pkgtypes.MsgRebalanceEmissions{})
-	case types.AllianceHubUpdateRewards:
+	case types.AllianceUpdateRewards:
 		sdkMsg, _ = json.Marshal(pkgtypes.MsgUpdateRewards{})
 	}
 
