@@ -9,6 +9,12 @@ start-alliance-oracle-feeder:
 start-alliance-rebalance-feeder:
 	go run ./cmd/feeder/feeder.go alliance-rebalance-feeder
 
+start-alliance-update-rewards:
+	go run ./cmd/feeder/feeder.go alliance-update-rewards
+
+start-alliance-rebalance-emissions:
+	go run ./cmd/feeder/feeder.go alliance-rebalance-emissions
+
 start-price-server:
 	go run ./cmd/price-server/price_server.go
 
