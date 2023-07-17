@@ -19,10 +19,14 @@ func NewBaseGrpc() *BaseGrpc {
 	return &BaseGrpc{}
 }
 
-func (p *BaseGrpc) Connection(nodeUrl string, interfaceRegistry sdk.InterfaceRegistry) (*grpc.ClientConn, error) {
+func (p *BaseGrpc) Connection(
+	nodeUrl string,
+	interfaceRegistry sdk.InterfaceRegistry,
+) (*grpc.ClientConn, error) {
 	var authCredentials = grpc.WithTransportCredentials(insecure.NewCredentials())
 
-	if strings.Contains(nodeUrl, "carbon") {
+	if strings.Contains(nodeUrl, "carbon") ||
+		strings.Contains(nodeUrl, "pisco") {
 		authCredentials = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
 	}
 
@@ -31,6 +35,6 @@ func (p *BaseGrpc) Connection(nodeUrl string, interfaceRegistry sdk.InterfaceReg
 		authCredentials,
 		grpc.WithDefaultCallOptions(
 			grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec()),
-			grpc.MaxCallRecvMsgSize(1024*1024*16), // 16MB
+			grpc.MaxCallRecvMsgSize(1024*1024*124), // 124MB
 		))
 }
