@@ -7,9 +7,8 @@ import (
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"github.com/tendermint/tmlibs/bech32"
+	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	"github.com/terra-money/oracle-feeder-go/internal/types"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/cosmos/cosmos-sdk/client"
 	"github.com/cosmos/cosmos-sdk/codec"
@@ -26,6 +25,7 @@ import (
 )
 
 type TransactionsProvider struct {
+	internal.BaseGrpc
 	privKey                    cryptoTypes.PrivKey
 	nodeGrpcUrl                string
 	oracleAddress              string
@@ -73,6 +73,7 @@ func NewTransactionsProvider(
 	privKey := hd.Secp256k1.Generate()(privKeyBytes)
 	address := sdk.AccAddress(privKey.PubKey().Address())
 	return TransactionsProvider{
+		BaseGrpc:                   *internal.NewBaseGrpc(),
 		privKey:                    privKey,
 		nodeGrpcUrl:                nodeGrpcUrl,
 		address:                    address,
@@ -107,7 +108,7 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	txBuilder, txConfig, interfaceRegistry := p.getTxClients()
 
 	// create gRPC connection
-	grpcConn, err := p.getRPCConnection(p.nodeGrpcUrl, interfaceRegistry)
+	grpcConn, err := p.BaseGrpc.Connection(ctx, p.nodeGrpcUrl)
 	if err != nil {
 		return "", err
 	}
@@ -246,14 +247,6 @@ func (p *TransactionsProvider) getTxClients() (client.TxBuilder, client.TxConfig
 	txBuilder.SetTimeoutHeight(0)
 
 	return txBuilder, txConfig, interfaceRegistry
-}
-
-func (p *TransactionsProvider) getRPCConnection(nodeUrl string, interfaceRegistry sdktypes.InterfaceRegistry) (*grpc.ClientConn, error) {
-	return grpc.Dial(
-		nodeUrl,
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-		grpc.WithDefaultCallOptions(grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec())),
-	)
 }
 
 func (p *TransactionsProvider) getContractAddress() string {

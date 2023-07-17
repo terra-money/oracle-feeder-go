@@ -119,7 +119,6 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 			annualProvisionsRes, err = mintClient.AnnualProvisions(ctx, &mintypes.QueryAnnualProvisionsRequest{})
 
 		}
-
 		if err != nil {
 			fmt.Printf("annualProvisionsRes: %v \n", err)
 			return nil, err

@@ -338,7 +338,6 @@ func (p *allianceValidatorsProvider) querySmartContractConfig(ctx context.Contex
 		Address:   p.allianceHubContractAddress,
 		QueryData: []byte(`{ "config" : {}}`),
 	})
-	fmt.Printf("res: %v err: %v\n", res, err)
 	if err != nil {
 		return nil, err
 	}
