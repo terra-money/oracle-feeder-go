@@ -3,12 +3,16 @@
         "price_server_port": "8532",
         "oracle_address": "terra1jf3nndysevley5p3wnajkjvjxcql9d00gpj4en3xwp7yrkrdqess48rr27",
         "alliance_hub_contract_address": "terra1majrm6e6n0eg760n9fs4g5jvwzh4ytp8e2d99mfgzv2e7mjmdwxse0ty73",
-        "feeder_retries": 4
+        "feeder_retries": 4,
+        "blocks_to_be_senior_validator": 100000,
+        "vote_on_proposals_to_be_senior_validator": 3
     },
     "develop": {
         "price_server_port": "8532",
         "oracle_address": "terra1jf3nndysevley5p3wnajkjvjxcql9d00gpj4en3xwp7yrkrdqess48rr27",
-        "alliance_hub_contract_address" : "terra1majrm6e6n0eg760n9fs4g5jvwzh4ytp8e2d99mfgzv2e7mjmdwxse0ty73",
-        "feeder_retries": 4
+        "alliance_hub_contract_address": "terra1majrm6e6n0eg760n9fs4g5jvwzh4ytp8e2d99mfgzv2e7mjmdwxse0ty73",
+        "feeder_retries": 4,
+        "blocks_to_be_senior_validator": 10000,
+        "vote_on_proposals_to_be_senior_validator": 0
     }
 }

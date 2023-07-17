@@ -71,7 +71,7 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 	// Iterate over all configured nodes in the config file,
 	// create a grpcConnection to each node and query the required data.
 	for _, grpcUrl := range p.config.GRPCUrls {
-		grpcConn, err := p.BaseGrpc.Connection(grpcUrl, nil)
+		grpcConn, err := p.BaseGrpc.Connection(ctx, grpcUrl)
 		if err != nil {
 			return nil, err
 		}

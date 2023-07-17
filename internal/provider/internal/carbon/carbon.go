@@ -36,7 +36,7 @@ func NewCarbonProvider() *CarbonProvider {
 }
 
 func (p *CarbonProvider) GetAnnualProvisions(ctx context.Context) (*mintypes.QueryAnnualProvisionsResponse, error) {
-	grpcConn, err := p.BaseGrpc.Connection(p.grpc, nil)
+	grpcConn, err := p.BaseGrpc.Connection(ctx, p.grpc)
 	if err != nil {
 		return nil, err
 	}

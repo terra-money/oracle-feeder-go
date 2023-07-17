@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/terra-money/oracle-feeder-go/config"
@@ -27,11 +28,13 @@ import (
 
 type allianceValidatorsProvider struct {
 	internal.BaseGrpc
-	nodeGrpcUrl                string
-	stationApiUrl              string
-	allianceHubContractAddress string
-	config                     *config.AllianceConfig
-	providerManager            *provider.ProviderManager
+	config                             *config.AllianceConfig
+	providerManager                    *provider.ProviderManager
+	nodeGrpcUrl                        string
+	stationApiUrl                      string
+	allianceHubContractAddress         string
+	blocksToBeSeniorValidator          int64
+	voteOnProposalsToBeSeniorValidator int64
 }
 
 func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManager *provider.ProviderManager) *allianceValidatorsProvider {
@@ -50,13 +53,37 @@ func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManage
 		panic("ALLIANCE_HUB_CONTRACT_ADDRESS env variable is not set!")
 	}
 
+	var blocksToBeSeniorValidator int64 = 100_000
+	if blocks := os.Getenv("BLOCKS_TO_BE_SENIOR_VALIDATOR"); len(blocks) != 0 {
+		blocks, err := strconv.ParseInt(blocks, 10, 64)
+		if err != nil {
+			panic("BLOCKS_TO_BE_SENIOR_VALIDATOR env variable is not a valid integer!")
+		}
+
+		blocksToBeSeniorValidator = blocks
+	}
+
+	var voteOnProposalsToBeSeniorValidator int64 = 3
+	if proposals := os.Getenv("VOTE_ON_PROPOSALS_TO_BE_SENIOR_VALIDATOR"); len(proposals) != 0 {
+		voteOnProposals, err := strconv.ParseInt(proposals, 10, 64)
+		if err != nil {
+			panic("VOTE_ON_PROPOSALS_TO_BE_SENIOR_VALIDATOR env variable is not a valid integer!")
+		}
+		if voteOnProposals > 3 {
+			panic("VOTE_ON_PROPOSALS_TO_BE_SENIOR_VALIDATOR env variable is greater than 3!")
+		}
+		voteOnProposalsToBeSeniorValidator = voteOnProposals
+	}
+
 	return &allianceValidatorsProvider{
-		BaseGrpc:                   *internal.NewBaseGrpc(),
-		config:                     config,
-		nodeGrpcUrl:                nodeGrpcUrl,
-		stationApiUrl:              stationApiUrl,
-		providerManager:            providerManager,
-		allianceHubContractAddress: allianceHubContractAddress,
+		BaseGrpc:                           *internal.NewBaseGrpc(),
+		config:                             config,
+		nodeGrpcUrl:                        nodeGrpcUrl,
+		stationApiUrl:                      stationApiUrl,
+		providerManager:                    providerManager,
+		allianceHubContractAddress:         allianceHubContractAddress,
+		blocksToBeSeniorValidator:          blocksToBeSeniorValidator,
+		voteOnProposalsToBeSeniorValidator: voteOnProposalsToBeSeniorValidator,
 	}
 }
 
@@ -100,7 +127,7 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 		}
 
 		// (4) skip if have not voted in the last 3 proposals
-		if !atLeastThreeOccurrences(proposalsVotes, val.OperatorAddress) {
+		if !p.votedForLatestProposals(proposalsVotes, val.OperatorAddress) {
 			continue
 		}
 
@@ -300,18 +327,18 @@ func FilterAllianceValsWithStake(allianceVals []alliancetypes.QueryAllianceValid
 }
 
 func (p *allianceValidatorsProvider) querySmartContractConfig(ctx context.Context) (*types.AllianceHubConfigData, error) {
-	grpcConn, err := p.BaseGrpc.Connection(p.nodeGrpcUrl, nil)
+	grpcConn, err := p.BaseGrpc.Connection(ctx, p.nodeGrpcUrl)
 	if err != nil {
 		fmt.Printf("grpcConn: %v \n", err)
 		return nil, err
 	}
 	defer grpcConn.Close()
 	client := wasmtypes.NewQueryClient(grpcConn)
-
 	res, err := client.SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
 		Address:   p.allianceHubContractAddress,
 		QueryData: []byte(`{ "config" : {}}`),
 	})
+	fmt.Printf("res: %v err: %v\n", res, err)
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +359,7 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 	[]alliancetypes.QueryAllianceValidatorResponse,
 	error,
 ) {
-	grpcConn, err := p.BaseGrpc.Connection(p.nodeGrpcUrl, nil)
+	grpcConn, err := p.BaseGrpc.Connection(ctx, p.nodeGrpcUrl)
 	if err != nil {
 		fmt.Printf("grpcConn: %v \n", err)
 		return nil, nil, nil, nil, err
@@ -373,7 +400,7 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 	}
 
 	seniorValidatorsRes, err := nodeClient.GetValidatorSetByHeight(ctx, &tmservice.GetValidatorSetByHeightRequest{
-		Height: latestHeightRes.SdkBlock.Header.Height - 100_000,
+		Height: latestHeightRes.SdkBlock.Header.Height - p.blocksToBeSeniorValidator,
 	})
 	if err != nil {
 		fmt.Printf("seniorValidatorsRes: %v \n", err)
@@ -440,12 +467,12 @@ func (p allianceValidatorsProvider) queryStation(propId uint64) (res *[]types.St
 	return res, nil
 }
 
-func atLeastThreeOccurrences(stationVotes []types.StationVote, val string) bool {
+func (p allianceValidatorsProvider) votedForLatestProposals(stationVotes []types.StationVote, val string) bool {
 	count := 0
 	for _, v := range stationVotes {
 		if v.Voter == val {
 			count++
 		}
 	}
-	return count >= 3
+	return count >= int(p.voteOnProposalsToBeSeniorValidator)
 }

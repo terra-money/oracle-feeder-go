@@ -47,7 +47,7 @@ func (p *LSDProvider) QueryLSTRebaseFactor(symbol string) (*sdk.Dec, error) {
 
 func (p *LSDProvider) queryAmpLunaRebaseFactor() (*sdk.Dec, error) {
 	ctx := context.Background()
-	connection, err := p.BaseGrpc.Connection(p.phoenixNodeUrl, nil)
+	connection, err := p.BaseGrpc.Connection(ctx, p.phoenixNodeUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func (p *LSDProvider) queryAmpLunaRebaseFactor() (*sdk.Dec, error) {
 
 func (p *LSDProvider) queryBoneLunaRebaseFactor() (*sdk.Dec, error) {
 	ctx := context.Background()
-	connection, err := p.BaseGrpc.Connection(p.phoenixNodeUrl, nil)
+	connection, err := p.BaseGrpc.Connection(ctx, p.phoenixNodeUrl)
 	if err != nil {
 		return nil, err
 	}
