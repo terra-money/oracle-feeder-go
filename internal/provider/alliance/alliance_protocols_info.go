@@ -11,7 +11,6 @@ import (
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
 	pkgtypes "github.com/terra-money/oracle-feeder-go/pkg/types"
-	pricetypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
@@ -19,11 +18,13 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
+	"github.com/terra-money/oracle-feeder-go/internal/provider/internal/carbon"
 )
 
 type allianceProtocolsInfo struct {
 	internal.BaseGrpc
 	provider.LSDProvider
+	carbon.CarbonProvider
 	config          *config.AllianceConfig
 	providerManager *provider.ProviderManager
 }
@@ -33,6 +34,7 @@ func NewAllianceProtocolsInfo(config *config.AllianceConfig, providerManager *pr
 	return &allianceProtocolsInfo{
 		BaseGrpc:        *internal.NewBaseGrpc(),
 		LSDProvider:     *provider.NewLSDProvider(),
+		CarbonProvider:  *carbon.NewCarbonProvider(),
 		config:          config,
 		providerManager: providerManager,
 	}
@@ -110,7 +112,14 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 			return nil, err
 		}
 
-		annualProvisionsRes, err := mintClient.AnnualProvisions(ctx, &mintypes.QueryAnnualProvisionsRequest{})
+		var annualProvisionsRes *mintypes.QueryAnnualProvisionsResponse
+		if strings.Contains(grpcUrl, "carbon") {
+			annualProvisionsRes, err = p.CarbonProvider.GetAnnualProvisions(ctx)
+		} else {
+			annualProvisionsRes, err = mintClient.AnnualProvisions(ctx, &mintypes.QueryAnnualProvisionsRequest{})
+
+		}
+
 		if err != nil {
 			fmt.Printf("annualProvisionsRes: %v \n", err)
 			return nil, err
@@ -120,7 +129,7 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 		// search for the price of the native token in
 		// the prices response.
 		bondDenom := strings.Replace(stakingParamsRes.GetParams().BondDenom, "u", "", 1)
-		var priceRes pricetypes.PriceOfCoin
+		var priceRes pkgtypes.PriceOfCoin
 
 		for _, price := range pricesRes.Prices {
 			if strings.EqualFold(price.Denom, bondDenom) {
