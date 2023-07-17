@@ -24,7 +24,8 @@ func (p *BaseGrpc) Connection(
 	var authCredentials = grpc.WithTransportCredentials(insecure.NewCredentials())
 
 	if strings.Contains(nodeUrl, "carbon") ||
-		strings.Contains(nodeUrl, "pisco") {
+		strings.Contains(nodeUrl, "pisco") ||
+		strings.Contains(nodeUrl, "phoenix") {
 		authCredentials = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
 	}
 
