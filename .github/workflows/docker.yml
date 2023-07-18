@@ -154,4 +154,4 @@ jobs:
           ref: ${{ env.TF_GITHUB_REF }}
           workflow: Terraform
           token: ${{ secrets.TFL_GITHUB_TOKEN }}
-          inputs: '{ "ALLIANCE_HUB_CONTRACT_ADDRESS": "${{ needs.refs-parsing.outputs.alliance_hub_contract_address }}", "ORACLE_ADDRESS": "${{ needs.refs-parsing.outputs.oracle_address }}", "PRICE_SERVER_PORT": "${{needs.refs-parsing.outputs.price_server_port}}", "FEEDER_RETRIES": "${{needs.refs-parsing.outputs.feeder_retries}}", "TAG": "${{env.TAG}}"  }'
+          inputs: '{ "ALLIANCE_HUB_CONTRACT_ADDRESS": "${{ needs.refs-parsing.outputs.alliance_hub_contract_address }}","BLOCKS_TO_BE_SENIOR_VALIDATOR": "${{ needs.refs-parsing.outputs.blocks_to_be_senior_validator }}","VOTE_ON_PROPOSALS_TO_BE_SENIOR_VALIDATOR": "${{ needs.refs-parsing.outputs.vote_on_proposals_to_be_senior_validator }}", "ORACLE_ADDRESS": "${{ needs.refs-parsing.outputs.oracle_address }}", "PRICE_SERVER_PORT": "${{needs.refs-parsing.outputs.price_server_port}}", "FEEDER_RETRIES": "${{needs.refs-parsing.outputs.feeder_retries}}", "TAG": "${{env.TAG}}"  }'
