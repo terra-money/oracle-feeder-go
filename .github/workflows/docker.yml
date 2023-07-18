@@ -46,12 +46,16 @@ jobs:
           ALLIANCE_HUB_CONTRACT_ADDRESS=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].alliance_hub_contract_address' params.json)
           PRICE_SERVER_PORT=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].price_server_port' params.json)
           FEEDER_RETRIES=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].feeder_retries' params.json)
+          BLOCKS_TO_BE_SENIOR_VALIDATOR=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].blocks_to_be_senior_validator' params.json)
+          VOTE_ON_PROPOSALS_TO_BE_SENIOR_VALIDATOR=$(jq -r --arg branch "$BRANCH_NAME" '.[$branch].vote_on_proposals_to_be_senior_validator' params.json)
 
           # Set output parameters for subsequent jobs
           echo "::set-output name=oracle_address::$ORACLE_ADDRESS"
           echo "::set-output name=alliance_hub_contract_address::$ALLIANCE_HUB_CONTRACT_ADDRESS"
           echo "::set-output name=price_server_port::$PRICE_SERVER_PORT"
           echo "::set-output name=feeder_retries::$FEEDER_RETRIES"
+          echo "::set-output name=blocks_to_be_senior_validator::$BLOCKS_TO_BE_SENIOR_VALIDATOR"
+          echo "::set-output name=vote_on_proposals_to_be_senior_validator::$VOTE_ON_PROPOSALS_TO_BE_SENIOR_VALIDATOR"
 
   build:
     runs-on: ubuntu-latest
