@@ -1,9 +1,5 @@
 package config
 
-import (
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
-)
-
 var DefaultPriceServerConfig = Config{
 	Port:             8532,
 	MetricsPort:      8533,
@@ -1444,7 +1440,7 @@ var DefaultPriceServerConfig = Config{
 
 var DefaultAllianceConfig = AllianceConfig{
 	GRPCUrls: []string{
-		"migaloo-grpc.polkachu.com:20790",
+		"migaloo-grpc.lavenderfive.com:443",
 		"kujira-grpc.polkachu.com:11890",
 		"query-grpc.carbon.network:443",
 	},
@@ -1472,23 +1468,19 @@ var DefaultAllianceConfig = AllianceConfig{
 		{
 			CounterpartyChainId: "migaloo-1",
 			LSTData: LSTData{
-				IBCDenom:     "ibc/623CD0B9778AD974713317EA0438A0CCAA72AF0BBE7BEE002205BCA25F1CA3BA",
-				RebaseFactor: sdktypes.MustNewDecFromStr("1.04"),
+				Symbol:   "AMPWHALE",
+				IBCDenom: "ibc/B3F639855EE7478750CC8F82072307ED6E131A8EFF20345E1D136B50C4E5EC36",
 			},
 		},
-		{
-			CounterpartyChainId: "migaloo-1",
-			LSTData: LSTData{
-				IBCDenom:     "factory/terra1zdpgj8am5nqqvht927k3etljyl6a52kwqup0je/stDeck",
-				RebaseFactor: sdktypes.MustNewDecFromStr("1.01"),
-			},
-		},
-		{
-			CounterpartyChainId: "carbon-1",
-			LSTData: LSTData{
-				IBCDenom:     "factory/terra1zdpgj8am5nqqvht927k3etljyl6a52kwqup0je/stOracle",
-				RebaseFactor: sdktypes.MustNewDecFromStr("1.07"),
-			},
-		},
+		// FIXME: a GRPC with a greater limit than 300k gas is needed
+		// this does not work: (https://migaloo-api.polkachu.com/cosmwasm/wasm/v1/contract/migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u/smart/eyJzdGF0ZSI6e319)
+		// this works: (https://migaloo-api.dalnim.finance/cosmwasm/wasm/v1/contract/migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u/smart/eyJzdGF0ZSI6e319)
+		// {
+		// 	CounterpartyChainId: "migaloo-1",
+		// 	LSTData: LSTData{
+		// 		Symbol:   "BONEWHALE",
+		// 		IBCDenom: "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E",
+		// 	},
+		// },
 	},
 }
