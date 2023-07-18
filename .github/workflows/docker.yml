@@ -25,6 +25,8 @@ jobs:
       price_server_port: ${{ steps.parse-refs.outputs.price_server_port }}
       feeder_retries: ${{ steps.parse-refs.outputs.feeder_retries }}
       alliance_hub_contract_address: ${{ steps.parse-refs.outputs.alliance_hub_contract_address }}
+      blocks_to_be_senior_validator: ${{ steps.parse-refs.outputs.blocks_to_be_senior_validator }}
+      vote_on_proposals_to_be_senior_validator: ${{ steps.parse-refs.outputs.vote_on_proposals_to_be_senior_validator }}
 
     steps:
       - name: Checkout
