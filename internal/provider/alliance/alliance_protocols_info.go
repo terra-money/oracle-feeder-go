@@ -50,7 +50,15 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 
 	// Given the default list of LSTSData this method
 	// queries the blockchain for the rebase factor of the LSD.
-	lstsData, err := p.queryRebaseFactors(p.config.LSTSData)
+	lstsData, err := p.queryRebaseFactors(ctx, p.config.LSTSData)
+	if err != nil {
+		fmt.Printf("queryRebaseFactors: %v \n", err)
+		return nil, err
+	}
+
+	// Given the default list of LSTSData this method
+	// queries the blockchain for the rebase factor of the LSD.
+	lstsDataOnPhoenix, err := p.queryRebaseFactorsForLstsOnPhoenix(ctx, p.config.LSTOnPhoenix)
 	if err != nil {
 		fmt.Printf("queryRebaseFactors: %v \n", err)
 		return nil, err
@@ -153,7 +161,7 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 		)
 
 		normalizedLunaAlliance := p.parseLunaAlliances(allianceParamsRes.Params, allianceRes.Alliances, lstsData)
-		alliancesOnPhoenix := p.filterAlliancesOnPhoenix(nodeRes)
+		alliancesOnPhoenix := p.parseAlliancesOnPhoenix(nodeRes, lstsDataOnPhoenix)
 
 		protocolRes.ProtocolsInfo = append(protocolRes.ProtocolsInfo, types.NewProtocolInfo(
 			nodeRes.DefaultNodeInfo.Network,
@@ -166,9 +174,10 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 
 	return &res, nil
 }
-func (p *allianceProtocolsInfo) queryRebaseFactors(configLST []config.LSTData) ([]config.LSTData, error) {
+
+func (p *allianceProtocolsInfo) queryRebaseFactors(ctx context.Context, configLST []config.LSTData) ([]config.LSTData, error) {
 	for i, lst := range configLST {
-		rebaseFactor, err := p.LSDProvider.QueryLSTRebaseFactor(lst.Symbol)
+		rebaseFactor, err := p.LSDProvider.QueryLSTRebaseFactor(ctx, lst.Symbol)
 		if err != nil {
 			fmt.Printf("queryRebaseFactors: %v \n", err)
 			continue
@@ -180,15 +189,36 @@ func (p *allianceProtocolsInfo) queryRebaseFactors(configLST []config.LSTData) (
 
 }
 
-func (p *allianceProtocolsInfo) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeInfoResponse) []types.BaseAlliance {
+func (p *allianceProtocolsInfo) queryRebaseFactorsForLstsOnPhoenix(ctx context.Context, configLST []config.LSTOnPhoenix) ([]config.LSTOnPhoenix, error) {
+	for i, lst := range configLST {
+		rebaseFactor, err := p.LSDProvider.QueryLSTRebaseFactor(ctx, lst.Symbol)
+		if err != nil {
+			fmt.Printf("queryRebaseFactorsForLstsOnPhoenix: %v \n", err)
+			continue
+		}
+		configLST[i].RebaseFactor = *rebaseFactor
+	}
+
+	return configLST, nil
+
+}
+
+func (p *allianceProtocolsInfo) parseAlliancesOnPhoenix(
+	nodeRes *tmservice.GetNodeInfoResponse,
+	phoenixLSTParsedData []config.LSTOnPhoenix,
+) []types.BaseAlliance {
 	baseAlliances := []types.BaseAlliance{}
 
 	for _, allianceOnPhoenix := range p.config.LSTOnPhoenix {
-		if allianceOnPhoenix.CounterpartyChainId == nodeRes.DefaultNodeInfo.Network {
-			baseAlliances = append(baseAlliances, types.BaseAlliance{
-				IBCDenom:     allianceOnPhoenix.IBCDenom,
-				RebaseFactor: allianceOnPhoenix.RebaseFactor,
-			})
+		for _, lstData := range phoenixLSTParsedData {
+
+			if lstData.IBCDenom == allianceOnPhoenix.IBCDenom &&
+				allianceOnPhoenix.CounterpartyChainId == nodeRes.DefaultNodeInfo.Network {
+				baseAlliances = append(baseAlliances, types.BaseAlliance{
+					IBCDenom:     lstData.IBCDenom,
+					RebaseFactor: lstData.RebaseFactor,
+				})
+			}
 		}
 	}
 	return baseAlliances
