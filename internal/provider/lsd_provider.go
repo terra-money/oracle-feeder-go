@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
+	"github.com/terra-money/oracle-feeder-go/config"
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	"github.com/terra-money/oracle-feeder-go/internal/types"
 
@@ -16,12 +17,10 @@ import (
 
 type LSDProvider struct {
 	internal.BaseGrpc
-	phoenixNodeUrl string
-	strideApiUrl   string
-	ampSTHubLuna   string
-	boneSTHubLuna  string
+	strideApiUrl  string
+	ampSTHubLuna  string
+	boneSTHubLuna string
 
-	migalooNodeUrl string
 	ampSTHubWhale  string
 	boneSTHubWhale string
 }
@@ -30,12 +29,10 @@ func NewLSDProvider() *LSDProvider {
 	return &LSDProvider{
 		BaseGrpc: *internal.NewBaseGrpc(),
 
-		phoenixNodeUrl: "terra-grpc.polkachu.com:11790",
-		ampSTHubLuna:   "terra10788fkzah89xrdm27zkj5yvhj9x3494lxawzm5qq3vvxcqz2yzaqyd3enk",
-		boneSTHubLuna:  "terra1l2nd99yze5fszmhl5svyh5fky9wm4nz4etlgnztfu4e8809gd52q04n3ea",
-		strideApiUrl:   "https://stride-fleet.main.stridenet.co/api/Stride-Labs/stride/stakeibc/host_zone/phoenix-1",
+		ampSTHubLuna:  "terra10788fkzah89xrdm27zkj5yvhj9x3494lxawzm5qq3vvxcqz2yzaqyd3enk",
+		boneSTHubLuna: "terra1l2nd99yze5fszmhl5svyh5fky9wm4nz4etlgnztfu4e8809gd52q04n3ea",
+		strideApiUrl:  "https://stride-fleet.main.stridenet.co/api/Stride-Labs/stride/stakeibc/host_zone/phoenix-1",
 
-		migalooNodeUrl: "migaloo-grpc.lavenderfive.com:443",
 		ampSTHubWhale:  "migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4",
 		boneSTHubWhale: "migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u",
 	}
@@ -44,15 +41,15 @@ func NewLSDProvider() *LSDProvider {
 func (p *LSDProvider) QueryLSTRebaseFactor(ctx context.Context, symbol string) (*sdk.Dec, error) {
 	switch symbol {
 	case "AMPLUNA":
-		return p.queryAmpRebaseFactor(ctx, p.phoenixNodeUrl, p.ampSTHubLuna)
+		return p.queryAmpRebaseFactor(ctx, config.PHOENIX_GRPC, p.ampSTHubLuna)
 	case "BACKBONELUNA":
-		return p.queryBoneRebaseFactor(ctx, p.phoenixNodeUrl, p.boneSTHubLuna)
+		return p.queryBoneRebaseFactor(ctx, config.PHOENIX_GRPC, p.boneSTHubLuna)
 	case "STLUNA":
 		return p.queryStLunaRebaseFactor()
 	case "AMPWHALE":
-		return p.queryAmpRebaseFactor(ctx, p.migalooNodeUrl, p.ampSTHubWhale)
+		return p.queryAmpRebaseFactor(ctx, config.MIGALOO_GRPC, p.ampSTHubWhale)
 	case "BONEWHALE":
-		return p.queryBoneRebaseFactor(ctx, p.migalooNodeUrl, p.boneSTHubWhale)
+		return p.queryBoneRebaseFactor(ctx, config.MIGALOO_GRPC, p.boneSTHubWhale)
 	default:
 		return nil, fmt.Errorf("LSDProvider no querier implemented for symbol '%s'", symbol)
 	}

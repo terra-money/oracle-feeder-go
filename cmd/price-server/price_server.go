@@ -22,7 +22,7 @@ func main() {
 
 	stopCh := make(chan struct{})
 	manager := provider.NewProviderManager(&config.DefaultPriceServerConfig, stopCh)
-	allianceProvider := alliance_provider.NewAllianceProvider(&config.DefaultAllianceConfig, manager)
+	allianceProvider := alliance_provider.NewAllianceProvider(&config.AllianceDefaultConfig, manager)
 
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) {
