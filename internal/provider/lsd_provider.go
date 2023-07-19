@@ -17,9 +17,12 @@ import (
 
 type LSDProvider struct {
 	internal.BaseGrpc
-	strideApiUrl  string
+
 	ampSTHubLuna  string
 	boneSTHubLuna string
+
+	strideApiUrl   string
+	stafiHubApiUrl string
 
 	ampSTHubWhale  string
 	boneSTHubWhale string
@@ -31,7 +34,9 @@ func NewLSDProvider() *LSDProvider {
 
 		ampSTHubLuna:  "terra10788fkzah89xrdm27zkj5yvhj9x3494lxawzm5qq3vvxcqz2yzaqyd3enk",
 		boneSTHubLuna: "terra1l2nd99yze5fszmhl5svyh5fky9wm4nz4etlgnztfu4e8809gd52q04n3ea",
-		strideApiUrl:  "https://stride-fleet.main.stridenet.co/api/Stride-Labs/stride/stakeibc/host_zone/phoenix-1",
+
+		strideApiUrl:   "https://stride-fleet.main.stridenet.co/api/Stride-Labs/stride/stakeibc/host_zone/phoenix-1",
+		stafiHubApiUrl: "https://public-rest-rpc1.stafihub.io/stafihub/stafihub/ledger/exchange_rate/urswth",
 
 		ampSTHubWhale:  "migaloo1436kxs0w2es6xlqpp9rd35e3d0cjnw4sv8j3a7483sgks29jqwgshqdky4",
 		boneSTHubWhale: "migaloo1mf6ptkssddfmxvhdx0ech0k03ktp6kf9yk59renau2gvht3nq2gqdhts4u",
@@ -46,6 +51,8 @@ func (p *LSDProvider) QueryLSTRebaseFactor(ctx context.Context, symbol string) (
 		return p.queryBoneRebaseFactor(ctx, config.PHOENIX_GRPC, p.boneSTHubLuna)
 	case "STLUNA":
 		return p.queryStLunaRebaseFactor()
+	case "URSWTH":
+		return p.queryUrSwthRebaseFactor()
 	case "AMPWHALE":
 		return p.queryAmpRebaseFactor(ctx, config.MIGALOO_GRPC, p.ampSTHubWhale)
 	case "BONEWHALE":
@@ -93,14 +100,12 @@ func (p *LSDProvider) queryBoneRebaseFactor(ctx context.Context, url, address st
 	if err != nil {
 		return nil, err
 	}
-	fmt.Print(string(res.Data) + "\n")
 
 	var boneConfigParsedRes types.BoneConfigData
 	err = json.Unmarshal(res.Data, &boneConfigParsedRes)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Print(boneConfigParsedRes, "\n")
 
 	return &boneConfigParsedRes.ExchangeRate, nil
 
@@ -127,4 +132,27 @@ func (p *LSDProvider) queryStLunaRebaseFactor() (*sdk.Dec, error) {
 	}
 
 	return &res.HostZone.RedemptionRate, nil
+}
+
+func (p *LSDProvider) queryUrSwthRebaseFactor() (*sdk.Dec, error) {
+	resp, err := http.Get(p.stafiHubApiUrl)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var res types.StafiHubExchangeRateRes
+	// Parse JSON response into struct
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return nil, err
+	}
+
+	return &res.ExchangeRate.Value, nil
 }
