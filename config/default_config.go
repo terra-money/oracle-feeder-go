@@ -1,9 +1,5 @@
 package config
 
-import (
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
-)
-
 var DefaultPriceServerConfig = Config{
 	Port:             8532,
 	MetricsPort:      8533,
@@ -309,7 +305,6 @@ var DefaultPriceServerConfig = Config{
 				"avaxusdt",
 				"axsusdt",
 				"bchusdt",
-				"bitusdt",
 				"blurusdt",
 				"bnbusdt",
 				"bsvusdt",
@@ -1438,43 +1433,6 @@ var DefaultPriceServerConfig = Config{
 			Interval: 30,
 			Timeout:  5,
 			Symbols:  FiatCoins,
-		},
-	},
-}
-
-var DefaultAllianceConfig = AllianceConfig{
-	GRPCUrls: []string{
-		"migaloo-grpc.polkachu.com:20790",
-		// "kujira-grpc.polkachu.com:11890",
-		"query-grpc.carbon.network:443",
-	},
-	LSTSData: []LSTData{
-		// Whale
-		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
-			Symbol:   "AMPLUNA",
-			IBCDenom: "ibc/05238E98A143496C8AF2B6067BABC84503909ECE9E45FBCBAC2CBA5C889FD82A",
-		},
-		{ // BoneLuna https://chainsco.pe/terra2/address/terra17aj4ty4sz4yhgm08na8drc0v03v2jwr3waxcqrwhajj729zhl7zqnpc0ml
-			Symbol:   "BACKBONELUNA",
-			IBCDenom: "ibc/40C29143BF4153B365089E40E437B7AA819672646C45BB0A5F1E10915A0B6708",
-		},
-		// Carbon
-		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
-			Symbol:   "AMPLUNA",
-			IBCDenom: "ibc/62A3870B9804FC3A92EAAA1F0F3F07E089DBF76CC521466CA33F5AAA8AD42290",
-		},
-		{ // Stride stLuna https://app.stride.zone/
-			Symbol:   "STLUNA",
-			IBCDenom: "ibc/FBEE20115530F474F8BBE1460DA85437C3FBBFAF4A5DEBD71CA6B9C40559A161",
-		},
-	},
-	LSTOnPhoenix: []LSTOnPhoenix{
-		{
-			CounterpartyChainId: "migaloo-1",
-			LSTData: LSTData{
-				IBCDenom:     "ibc/623CD0B9778AD974713317EA0438A0CCAA72AF0BBE7BEE002205BCA25F1CA3BA",
-				RebaseFactor: sdktypes.OneDec(),
-			},
 		},
 	},
 }

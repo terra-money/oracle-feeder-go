@@ -4,7 +4,7 @@ import (
 	sdk "github.com/cosmos/cosmos-sdk/types"
 )
 
-type BoneLunaData struct {
+type BoneConfigData struct {
 	TotalUSTeak   string     `json:"total_usteak"`
 	TotalNative   string     `json:"total_native"`
 	ExchangeRate  sdk.Dec    `json:"exchange_rate"`

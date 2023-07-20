@@ -11,7 +11,6 @@ import (
 	"github.com/terra-money/oracle-feeder-go/internal/provider/internal"
 	types "github.com/terra-money/oracle-feeder-go/internal/types"
 	pkgtypes "github.com/terra-money/oracle-feeder-go/pkg/types"
-	pricetypes "github.com/terra-money/oracle-feeder-go/pkg/types"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	sdktypes "github.com/cosmos/cosmos-sdk/types"
@@ -19,11 +18,13 @@ import (
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 
 	"github.com/terra-money/oracle-feeder-go/internal/provider"
+	"github.com/terra-money/oracle-feeder-go/internal/provider/internal/carbon"
 )
 
 type allianceProtocolsInfo struct {
 	internal.BaseGrpc
 	provider.LSDProvider
+	carbon.CarbonProvider
 	config          *config.AllianceConfig
 	providerManager *provider.ProviderManager
 }
@@ -33,6 +34,7 @@ func NewAllianceProtocolsInfo(config *config.AllianceConfig, providerManager *pr
 	return &allianceProtocolsInfo{
 		BaseGrpc:        *internal.NewBaseGrpc(),
 		LSDProvider:     *provider.NewLSDProvider(),
+		CarbonProvider:  *carbon.NewCarbonProvider(),
 		config:          config,
 		providerManager: providerManager,
 	}
@@ -48,7 +50,15 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 
 	// Given the default list of LSTSData this method
 	// queries the blockchain for the rebase factor of the LSD.
-	lstsData, err := p.queryRebaseFactors(p.config.LSTSData)
+	lstsData, err := p.queryRebaseFactors(ctx, p.config.LSTSData)
+	if err != nil {
+		fmt.Printf("queryRebaseFactors: %v \n", err)
+		return nil, err
+	}
+
+	// Given the default list of LSTSData this method
+	// queries the blockchain for the rebase factor of the LSD.
+	lstsDataOnPhoenix, err := p.queryRebaseFactorsForLstsOnPhoenix(ctx, p.config.LSTOnPhoenix)
 	if err != nil {
 		fmt.Printf("queryRebaseFactors: %v \n", err)
 		return nil, err
@@ -69,7 +79,7 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 	// Iterate over all configured nodes in the config file,
 	// create a grpcConnection to each node and query the required data.
 	for _, grpcUrl := range p.config.GRPCUrls {
-		grpcConn, err := p.BaseGrpc.Connection(grpcUrl, nil)
+		grpcConn, err := p.BaseGrpc.Connection(ctx, grpcUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -110,7 +120,13 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 			return nil, err
 		}
 
-		annualProvisionsRes, err := mintClient.AnnualProvisions(ctx, &mintypes.QueryAnnualProvisionsRequest{})
+		var annualProvisionsRes *mintypes.QueryAnnualProvisionsResponse
+		if strings.Contains(grpcUrl, "carbon") {
+			annualProvisionsRes, err = p.CarbonProvider.GetAnnualProvisions(ctx)
+		} else {
+			annualProvisionsRes, err = mintClient.AnnualProvisions(ctx, &mintypes.QueryAnnualProvisionsRequest{})
+
+		}
 		if err != nil {
 			fmt.Printf("annualProvisionsRes: %v \n", err)
 			return nil, err
@@ -120,7 +136,7 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 		// search for the price of the native token in
 		// the prices response.
 		bondDenom := strings.Replace(stakingParamsRes.GetParams().BondDenom, "u", "", 1)
-		var priceRes pricetypes.PriceOfCoin
+		var priceRes pkgtypes.PriceOfCoin
 
 		for _, price := range pricesRes.Prices {
 			if strings.EqualFold(price.Denom, bondDenom) {
@@ -145,7 +161,7 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 		)
 
 		normalizedLunaAlliance := p.parseLunaAlliances(allianceParamsRes.Params, allianceRes.Alliances, lstsData)
-		alliancesOnPhoenix := p.filterAlliancesOnPhoenix(nodeRes)
+		alliancesOnPhoenix := p.parseAlliancesOnPhoenix(nodeRes, lstsDataOnPhoenix)
 
 		protocolRes.ProtocolsInfo = append(protocolRes.ProtocolsInfo, types.NewProtocolInfo(
 			nodeRes.DefaultNodeInfo.Network,
@@ -158,9 +174,10 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 
 	return &res, nil
 }
-func (p *allianceProtocolsInfo) queryRebaseFactors(configLST []config.LSTData) ([]config.LSTData, error) {
+
+func (p *allianceProtocolsInfo) queryRebaseFactors(ctx context.Context, configLST []config.LSTData) ([]config.LSTData, error) {
 	for i, lst := range configLST {
-		rebaseFactor, err := p.LSDProvider.QueryLSTRebaseFactor(lst.Symbol)
+		rebaseFactor, err := p.LSDProvider.QueryLSTRebaseFactor(ctx, lst.Symbol)
 		if err != nil {
 			fmt.Printf("queryRebaseFactors: %v \n", err)
 			continue
@@ -172,15 +189,36 @@ func (p *allianceProtocolsInfo) queryRebaseFactors(configLST []config.LSTData) (
 
 }
 
-func (p *allianceProtocolsInfo) filterAlliancesOnPhoenix(nodeRes *tmservice.GetNodeInfoResponse) []types.BaseAlliance {
+func (p *allianceProtocolsInfo) queryRebaseFactorsForLstsOnPhoenix(ctx context.Context, configLST []config.LSTOnPhoenix) ([]config.LSTOnPhoenix, error) {
+	for i, lst := range configLST {
+		rebaseFactor, err := p.LSDProvider.QueryLSTRebaseFactor(ctx, lst.Symbol)
+		if err != nil {
+			fmt.Printf("queryRebaseFactorsForLstsOnPhoenix: %v \n", err)
+			continue
+		}
+		configLST[i].RebaseFactor = *rebaseFactor
+	}
+
+	return configLST, nil
+
+}
+
+func (p *allianceProtocolsInfo) parseAlliancesOnPhoenix(
+	nodeRes *tmservice.GetNodeInfoResponse,
+	phoenixLSTParsedData []config.LSTOnPhoenix,
+) []types.BaseAlliance {
 	baseAlliances := []types.BaseAlliance{}
 
 	for _, allianceOnPhoenix := range p.config.LSTOnPhoenix {
-		if allianceOnPhoenix.CounterpartyChainId == nodeRes.DefaultNodeInfo.Network {
-			baseAlliances = append(baseAlliances, types.BaseAlliance{
-				IBCDenom:     allianceOnPhoenix.IBCDenom,
-				RebaseFactor: allianceOnPhoenix.RebaseFactor,
-			})
+		for _, lstData := range phoenixLSTParsedData {
+
+			if lstData.IBCDenom == allianceOnPhoenix.IBCDenom &&
+				allianceOnPhoenix.CounterpartyChainId == nodeRes.DefaultNodeInfo.Network {
+				baseAlliances = append(baseAlliances, types.BaseAlliance{
+					IBCDenom:     lstData.IBCDenom,
+					RebaseFactor: lstData.RebaseFactor,
+				})
+			}
 		}
 	}
 	return baseAlliances

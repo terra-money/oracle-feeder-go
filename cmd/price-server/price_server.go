@@ -22,7 +22,7 @@ func main() {
 
 	stopCh := make(chan struct{})
 	manager := provider.NewProviderManager(&config.DefaultPriceServerConfig, stopCh)
-	allianceProvider := alliance_provider.NewAllianceProvider(&config.DefaultAllianceConfig, manager)
+	allianceProvider := alliance_provider.NewAllianceProvider(&config.AllianceDefaultConfig, manager)
 
 	r := gin.Default()
 	r.GET("/health", func(c *gin.Context) {
@@ -34,6 +34,8 @@ func main() {
 	})
 	r.GET("/alliance/protocol", func(c *gin.Context) {
 		allianceProtocolRes, err := allianceProvider.GetProtocolsInfo(ctx)
+		// allianceProtocolRes.UpdateChainsInfo.ChainsInfo.ProtocolsInfo[0].ChainId = "narwhal-1"
+		// allianceProtocolRes.UpdateChainsInfo.ChainsInfo.ProtocolsInfo[1].ChainId = "harpoon-4"
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, err)
 			return
