@@ -6,7 +6,7 @@ var KUJIRA_GRPC = "kujira-grpc.polkachu.com:11890"
 var CARBON_GRPC = "query-grpc.carbon.network:443"
 
 var AllianceDefaultConfig = AllianceConfig{
-	GRPCUrls: []string{MIGALOO_GRPC, KUJIRA_GRPC, CARBON_GRPC},
+	GRPCUrls: []string{MIGALOO_GRPC, KUJIRA_GRPC},
 	LSTSData: []LSTData{
 		// Whale
 		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
