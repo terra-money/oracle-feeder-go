@@ -1,8 +1,8 @@
 {
     "main": {
         "price_server_port": "8532",
-        "oracle_address": "terra1nz8nl7wmwkzz94et2wy4xfrkglqwl7u3svp2mh6tdcwtzcdaysmq23fzpu",
-        "alliance_hub_contract_address": "terra1majrm6e6n0eg760n9fs4g5jvwzh4ytp8e2d99mfgzv2e7mjmdwxse0ty73",
+        "oracle_address": "terra1mdpvgjc8jmv60a4x68nggsh9w8uyv69sqls04a76m9med5hsqmwsse8sxa",
+        "alliance_hub_contract_address": "terra1jwyzzsaag4t0evnuukc35ysyrx9arzdde2kg9cld28alhjurtthq0prs2s",
         "feeder_retries": 4,
         "blocks_to_be_senior_validator": 100000,
         "vote_on_proposals_to_be_senior_validator": 3

@@ -42,14 +42,12 @@ var AllianceDefaultConfig = AllianceConfig{
 				IBCDenom: "ibc/517E13F14A1245D4DE8CF467ADD4DA0058974CDCC880FA6AE536DBCA1D16D84E",
 			},
 		},
-		// When the token is bridged to Terra it will have an available IBC denom to feed the LST
-		// data on the oracle contract.
-		//	{
-		//		CounterpartyChainId: "carbon-1",
-		//		LSTData: LSTData{
-		//			Symbol:   "URSWTH",
-		//			IBCDenom: "",
-		//		},
-		//	},
+		{
+			CounterpartyChainId: "carbon-1",
+			LSTData: LSTData{
+				Symbol:   "URSWTH",
+				IBCDenom: "ibc/0E90026619DD296AD4EF9546396F292B465BAB6B5BE00ABD6162AA1CE8E68098",
+			},
+		},
 	},
 }

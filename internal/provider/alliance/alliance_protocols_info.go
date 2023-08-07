@@ -94,7 +94,7 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 		// Request alliances from the origin chain.
 		allianceRes, err := allianceClient.Alliances(ctx, &alliancetypes.QueryAlliancesRequest{})
 		if err != nil {
-			fmt.Printf("allianceRes: %v \n", err)
+			fmt.Printf("allianceRes for %s: %v \n", grpcUrl, err)
 			return nil, err
 		}
 		if len(allianceRes.Alliances) == 0 {
