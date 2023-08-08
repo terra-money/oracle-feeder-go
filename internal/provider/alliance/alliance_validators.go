@@ -105,7 +105,7 @@ func (p *allianceValidatorsProvider) GetAllianceInitialDelegations(ctx context.C
 	if err != nil {
 		return nil, err
 	}
-	compliantVals := p.getCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+	compliantVals := p.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
 	allianceTokenSupply, err := strconv.ParseInt(smartContractRes.AllianceTokenSupply, 10, 64)
 	if err != nil {
 		panic(err)
@@ -148,7 +148,7 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 	}
 
 	// Apply the previous rules to filter the list of validators
-	compliantVals := p.getCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+	compliantVals := p.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
 
 	valsWithAllianceTokens, totalAllianceStakedTokens := FilterAllianceValsWithStake(allianceVals, smartContractRes.AllianceTokenDenom)
 	compliantValsWithAllianceTokens,
@@ -172,7 +172,7 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 // (3) - commission rate to be lower than 10%,
 // (4) - Participate in the latest 3 gov proposals,
 // (5) - have been in the active validator set 100 000 blocks before the current one, (1 week approx)
-func (p *allianceValidatorsProvider) getCompliantValidators(stakingValidators []stakingtypes.Validator, proposalsVotes []types.StationVote, seniorValidators []*tmservice.Validator) []stakingtypes.Validator {
+func (p *allianceValidatorsProvider) GetCompliantValidators(stakingValidators []stakingtypes.Validator, proposalsVotes []types.StationVote, seniorValidators []*tmservice.Validator) []stakingtypes.Validator {
 	var compliantVals []stakingtypes.Validator
 
 	// of all blockchain validators to keep the ones
@@ -199,14 +199,17 @@ func (p *allianceValidatorsProvider) getCompliantValidators(stakingValidators []
 			continue
 		}
 
+		isSeniorVal := false
 		for _, seniorValidator := range seniorValidators {
 			// (5) skip if it have not been in the active validator set 100 000 blocks before the current one
-			if val.OperatorAddress != seniorValidator.Address {
-				continue
+			if val.OperatorAddress == seniorValidator.Address {
+				isSeniorVal = true
 			}
 		}
 
-		compliantVals = append(compliantVals, val)
+		if isSeniorVal {
+			compliantVals = append(compliantVals, val)
+		}
 	}
 	return compliantVals
 }

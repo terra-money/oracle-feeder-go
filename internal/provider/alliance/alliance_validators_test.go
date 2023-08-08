@@ -1,9 +1,12 @@
 package alliance_provider_test
 
 import (
+	"os"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
 	alliancetypes "github.com/terra-money/alliance/x/alliance/types"
@@ -281,4 +284,270 @@ func TestParseAllianceValsWithNoneCompliant(t *testing.T) {
 	require.Equal(t, 0, len(compliant))
 	require.Equal(t, 3, len(nonCompliant))
 
+}
+
+func TestAllianceCompliantVal(t *testing.T) {
+	// GIVEN
+	os.Setenv("NODE_GRPC_URL", "mock")
+	os.Setenv("STATION_API", "mock")
+	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
+
+	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	stakingValidators := []stakingtypes.Validator{
+		{
+			Status:          stakingtypes.Bonded,
+			OperatorAddress: "val1",
+			Jailed:          false,
+			Commission: stakingtypes.Commission{
+				CommissionRates: stakingtypes.CommissionRates{
+					Rate: sdktypes.MustNewDecFromStr("0.09"),
+				},
+			},
+		},
+	}
+	proposalsVotes := []types.StationVote{
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+	}
+	seniorValidators := []*tmservice.Validator{
+		{
+			Address: "val1",
+		},
+	}
+
+	// WHEN
+	res := avp.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+
+	// THEN
+	require.Equal(t, []stakingtypes.Validator{
+		{
+			Status:          stakingtypes.Bonded,
+			OperatorAddress: "val1",
+			Jailed:          false,
+			Commission: stakingtypes.Commission{
+				CommissionRates: stakingtypes.CommissionRates{
+					Rate: sdktypes.MustNewDecFromStr("0.09"),
+				},
+			},
+		},
+	}, res)
+}
+
+func TestAllianceNonCompliantValUnbonded(t *testing.T) {
+	// GIVEN
+	os.Setenv("NODE_GRPC_URL", "mock")
+	os.Setenv("STATION_API", "mock")
+	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
+
+	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	stakingValidators := []stakingtypes.Validator{
+		{
+			Status:          stakingtypes.Unbonded,
+			OperatorAddress: "val1",
+			Jailed:          false,
+			Commission: stakingtypes.Commission{
+				CommissionRates: stakingtypes.CommissionRates{
+					Rate: sdktypes.MustNewDecFromStr("0.09"),
+				},
+			},
+		},
+	}
+	proposalsVotes := []types.StationVote{
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+	}
+	seniorValidators := []*tmservice.Validator{
+		{
+			Address: "val1",
+		},
+	}
+
+	// WHEN
+	res := avp.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+
+	// THEN
+	require.Equal(t, 0, len(res))
+}
+
+func TestAllianceNonCompliantValJailed(t *testing.T) {
+	// GIVEN
+	os.Setenv("NODE_GRPC_URL", "mock")
+	os.Setenv("STATION_API", "mock")
+	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
+
+	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	stakingValidators := []stakingtypes.Validator{
+		{
+			Status:          stakingtypes.Bonded,
+			OperatorAddress: "val1",
+			Jailed:          true,
+			Commission: stakingtypes.Commission{
+				CommissionRates: stakingtypes.CommissionRates{
+					Rate: sdktypes.MustNewDecFromStr("0.09"),
+				},
+			},
+		},
+	}
+	proposalsVotes := []types.StationVote{
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+	}
+	seniorValidators := []*tmservice.Validator{
+		{
+			Address: "val1",
+		},
+	}
+
+	// WHEN
+	res := avp.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+
+	// THEN
+	require.Equal(t, 0, len(res))
+}
+
+func TestAllianceNonCompliantValHighComissions(t *testing.T) {
+	// GIVEN
+	os.Setenv("NODE_GRPC_URL", "mock")
+	os.Setenv("STATION_API", "mock")
+	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
+
+	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	stakingValidators := []stakingtypes.Validator{
+		{
+			Status:          stakingtypes.Bonded,
+			OperatorAddress: "val1",
+			Jailed:          false,
+			Commission: stakingtypes.Commission{
+				CommissionRates: stakingtypes.CommissionRates{
+					Rate: sdktypes.MustNewDecFromStr("0.11"),
+				},
+			},
+		},
+	}
+	proposalsVotes := []types.StationVote{
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+	}
+	seniorValidators := []*tmservice.Validator{
+		{
+			Address: "val1",
+		},
+	}
+
+	// WHEN
+	res := avp.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+
+	// THEN
+	require.Equal(t, 0, len(res))
+}
+
+func TestAllianceNonCompliantValNotEnoughVotes(t *testing.T) {
+	// GIVEN
+	os.Setenv("NODE_GRPC_URL", "mock")
+	os.Setenv("STATION_API", "mock")
+	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
+
+	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	stakingValidators := []stakingtypes.Validator{
+		{
+			Status:          stakingtypes.Bonded,
+			OperatorAddress: "val1",
+			Jailed:          false,
+			Commission: stakingtypes.Commission{
+				CommissionRates: stakingtypes.CommissionRates{
+					Rate: sdktypes.MustNewDecFromStr("0.09"),
+				},
+			},
+		},
+	}
+	proposalsVotes := []types.StationVote{
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+	}
+	seniorValidators := []*tmservice.Validator{
+		{
+			Address: "val1",
+		},
+	}
+
+	// WHEN
+	res := avp.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+
+	// THEN
+	require.Equal(t, 0, len(res))
+}
+
+func TestAllianceNonCompliantValNotSenior(t *testing.T) {
+	// GIVEN
+	os.Setenv("NODE_GRPC_URL", "mock")
+	os.Setenv("STATION_API", "mock")
+	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
+
+	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	stakingValidators := []stakingtypes.Validator{
+		{
+			Status:          stakingtypes.Bonded,
+			OperatorAddress: "val1",
+			Jailed:          false,
+			Commission: stakingtypes.Commission{
+				CommissionRates: stakingtypes.CommissionRates{
+					Rate: sdktypes.MustNewDecFromStr("0.09"),
+				},
+			},
+		},
+	}
+	proposalsVotes := []types.StationVote{
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+		{
+			Voter: "val1",
+		},
+	}
+	seniorValidators := []*tmservice.Validator{
+		{
+			Address: "val2",
+		},
+	}
+
+	// WHEN
+	res := avp.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+
+	// THEN
+	require.Equal(t, 0, len(res))
 }
