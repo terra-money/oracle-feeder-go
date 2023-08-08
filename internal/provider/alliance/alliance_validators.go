@@ -92,7 +92,7 @@ func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManage
 // the following rules:
 // (1) - be part of the active validator set,
 // (2) - to do not be jailed,
-// (3) - commission rate to be lower than 19%,
+// (3) - commission rate to be lower than 10%,
 // (4) - Participate in the latest 3 gov proposals,
 // (5) - have been in the active validator set 100 000 blocks before the current one, (1 week approx)
 func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Context) (*pkgtypes.MsgAllianceRedelegate, error) {
@@ -121,8 +121,8 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 			continue
 		}
 
-		// (3) skip if commission is grater than 19%
-		if val.Commission.CommissionRates.Rate.GT(sdktypes.MustNewDecFromStr("0.19")) {
+		// (3) skip if commission is grater than 10%
+		if val.Commission.CommissionRates.Rate.GT(sdktypes.MustNewDecFromStr("0.10")) {
 			continue
 		}
 
