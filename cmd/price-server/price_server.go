@@ -50,6 +50,14 @@ func main() {
 		}
 		c.JSON(http.StatusOK, allianceRebalanceVals)
 	})
+	r.GET("/alliance/delegations", func(c *gin.Context) {
+		allianceDelegatios, err := allianceProvider.GetAllianceInitialDelegations(ctx)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, err)
+			return
+		}
+		c.JSON(http.StatusOK, allianceDelegatios)
+	})
 	if os.Getenv("PRICE_SERVER_PORT") == "" {
 		os.Setenv("PORT", "8532") // use 8532 by default
 	} else {

@@ -5,6 +5,7 @@ import "fmt"
 type FeederType string
 
 const (
+	AllianceInitialDelegation  FeederType = "alliance-initial-delegation"
 	AllianceUpdateRewards      FeederType = "alliance-update-rewards"
 	AllianceRebalanceEmissions FeederType = "alliance-rebalance-emissions"
 	AllianceOracleFeeder       FeederType = "alliance-oracle-feeder"
@@ -14,6 +15,8 @@ const (
 // parse from string to FeederType
 func ParseFeederTypeFromString(s string) (FeederType, error) {
 	switch s {
+	case string(AllianceInitialDelegation):
+		return AllianceInitialDelegation, nil
 	case string(AllianceUpdateRewards):
 		return AllianceUpdateRewards, nil
 	case string(AllianceRebalanceEmissions):
@@ -37,6 +40,8 @@ func FromFeederTypeToPriceServerUrl(feederType FeederType) string {
 	case AllianceOracleFeeder:
 		return "/alliance/protocol"
 	case AllianceRebalanceFeeder:
+		return "/alliance/rebalance"
+	case AllianceInitialDelegation:
 		return "/alliance/rebalance"
 	default:
 		return ""

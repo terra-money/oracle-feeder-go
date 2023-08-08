@@ -2,6 +2,18 @@ package types
 
 import "github.com/cosmos/cosmos-sdk/types"
 
+type Delegation struct {
+	Validator string `json:"validator"`
+	Amount    string `json:"amount"`
+}
+
+func NewDelegation(validator string, amount string) Delegation {
+	return Delegation{
+		Validator: validator,
+		Amount:    amount,
+	}
+}
+
 type Redelegation struct {
 	SrcValidator string `json:"src_validator"`
 	DstValidator string `json:"dst_validator"`

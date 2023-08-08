@@ -95,6 +95,47 @@ func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManage
 // (3) - commission rate to be lower than 10%,
 // (4) - Participate in the latest 3 gov proposals,
 // (5) - have been in the active validator set 100 000 blocks before the current one, (1 week approx)
+func (p *allianceValidatorsProvider) GetAllianceInitialDelegations(ctx context.Context) (*pkgtypes.MsgAllianceDelegations, error) {
+	smartContractRes, err := p.querySmartContractConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	stakingValidators, seniorValidators, proposalsVotes, _, err := p.queryValidatorsData(ctx)
+	if err != nil {
+		return nil, err
+	}
+	compliantVals := p.getCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+	allianceTokenSupply, err := strconv.ParseInt(smartContractRes.AllianceTokenSupply, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	tokensPerVal := allianceTokenSupply / int64(len(compliantVals))
+
+	var delegations []types.Delegation
+	for i := 0; i < len(compliantVals); i++ {
+		delegations = append(
+			delegations,
+			types.NewDelegation(
+				compliantVals[i].OperatorAddress,
+				fmt.Sprint(tokensPerVal),
+			),
+		)
+	}
+
+	res := pkgtypes.NewMsgAllianceDelegations(delegations)
+
+	return &res, nil
+}
+
+// Query Terra GRPC, station API and return the list of alliance
+// redelegations that can be submitted to Alliance Hub applying
+// the following rules:
+// (1) - be part of the active validator set,
+// (2) - to do not be jailed,
+// (3) - commission rate to be lower than 10%,
+// (4) - Participate in the latest 3 gov proposals,
+// (5) - have been in the active validator set 100 000 blocks before the current one, (1 week approx)
 func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Context) (*pkgtypes.MsgAllianceRedelegate, error) {
 	smartContractRes, err := p.querySmartContractConfig(ctx)
 	if err != nil {
@@ -106,11 +147,38 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 		return nil, err
 	}
 
+	// Apply the previous rules to filter the list of validators
+	compliantVals := p.getCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+
+	valsWithAllianceTokens, totalAllianceStakedTokens := FilterAllianceValsWithStake(allianceVals, smartContractRes.AllianceTokenDenom)
+	compliantValsWithAllianceTokens,
+		nonCompliantValsWithAllianceTokens := ParseAllianceValsByCompliance(compliantVals, valsWithAllianceTokens, smartContractRes.AllianceTokenDenom)
+	avgTokensPerCompliantVal := totalAllianceStakedTokens.Quo(sdktypes.NewDec(int64(len(compliantVals))))
+
+	redelegations := RebalanceVals(
+		compliantValsWithAllianceTokens,
+		nonCompliantValsWithAllianceTokens,
+		avgTokensPerCompliantVal,
+	)
+
+	res := pkgtypes.NewMsgAllianceRedelegate(redelegations)
+
+	return &res, nil
+}
+
+// Apply the rules to filter the list of validators
+// (1) - be part of the active validator set,
+// (2) - to do not be jailed,
+// (3) - commission rate to be lower than 10%,
+// (4) - Participate in the latest 3 gov proposals,
+// (5) - have been in the active validator set 100 000 blocks before the current one, (1 week approx)
+func (p *allianceValidatorsProvider) getCompliantValidators(stakingValidators []stakingtypes.Validator, proposalsVotes []types.StationVote, seniorValidators []*tmservice.Validator) []stakingtypes.Validator {
 	var compliantVals []stakingtypes.Validator
-	// Apply the previous rules to filter the list
+
 	// of all blockchain validators to keep the ones
 	// that are compliant
 	for _, val := range stakingValidators {
+
 		// (1) skip if status is not bonded (again in case the api have a bug with the query)
 		if val.GetStatus() != stakingtypes.Bonded {
 			continue
@@ -131,8 +199,8 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 			continue
 		}
 
-		// (5) skip if it have not been in the active validator set 100 000 blocks before the current one
 		for _, seniorValidator := range seniorValidators {
+			// (5) skip if it have not been in the active validator set 100 000 blocks before the current one
 			if val.OperatorAddress != seniorValidator.Address {
 				continue
 			}
@@ -140,21 +208,7 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 
 		compliantVals = append(compliantVals, val)
 	}
-
-	valsWithAllianceTokens, totalAllianceStakedTokens := FilterAllianceValsWithStake(allianceVals, smartContractRes.AllianceTokenDenom)
-	compliantValsWithAllianceTokens,
-		nonCompliantValsWithAllianceTokens := ParseAllianceValsByCompliance(compliantVals, valsWithAllianceTokens, smartContractRes.AllianceTokenDenom)
-	avgTokensPerCompliantVal := totalAllianceStakedTokens.Quo(sdktypes.NewDec(int64(len(compliantVals))))
-
-	redelegations := RebalanceVals(
-		compliantValsWithAllianceTokens,
-		nonCompliantValsWithAllianceTokens,
-		avgTokensPerCompliantVal,
-	)
-
-	res := pkgtypes.NewMsgAllianceRedelegate(redelegations)
-
-	return &res, nil
+	return compliantVals
 }
 
 // In charge of rebalancing the stake from non-compliant validators to compliant ones.
