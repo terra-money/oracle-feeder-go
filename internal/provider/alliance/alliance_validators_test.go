@@ -5,8 +5,9 @@ import (
 	"testing"
 
 	"github.com/cosmos/cosmos-sdk/client/grpc/tmservice"
+	codecTypes "github.com/cosmos/cosmos-sdk/codec/types"
+	"github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	sdk "github.com/cosmos/cosmos-sdk/types"
-	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	"github.com/stretchr/testify/require"
 	alliancetypes "github.com/terra-money/alliance/x/alliance/types"
@@ -288,11 +289,13 @@ func TestParseAllianceValsWithNoneCompliant(t *testing.T) {
 
 func TestAllianceCompliantVal(t *testing.T) {
 	// GIVEN
+	os.Setenv("TERRA_LCD_URL", "mock")
 	os.Setenv("NODE_GRPC_URL", "mock")
 	os.Setenv("STATION_API", "mock")
 	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
 
 	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	pubKey, _ := codecTypes.NewAnyWithValue(secp256k1.GenPrivKey().PubKey())
 	stakingValidators := []stakingtypes.Validator{
 		{
 			Status:          stakingtypes.Bonded,
@@ -300,9 +303,10 @@ func TestAllianceCompliantVal(t *testing.T) {
 			Jailed:          false,
 			Commission: stakingtypes.Commission{
 				CommissionRates: stakingtypes.CommissionRates{
-					Rate: sdktypes.MustNewDecFromStr("0.09"),
+					Rate: sdk.MustNewDecFromStr("0.09"),
 				},
 			},
+			ConsensusPubkey: pubKey,
 		},
 	}
 	proposalsVotes := []types.StationVote{
@@ -318,7 +322,7 @@ func TestAllianceCompliantVal(t *testing.T) {
 	}
 	seniorValidators := []*tmservice.Validator{
 		{
-			Address: "val1",
+			PubKey: pubKey,
 		},
 	}
 
@@ -333,20 +337,23 @@ func TestAllianceCompliantVal(t *testing.T) {
 			Jailed:          false,
 			Commission: stakingtypes.Commission{
 				CommissionRates: stakingtypes.CommissionRates{
-					Rate: sdktypes.MustNewDecFromStr("0.09"),
+					Rate: sdk.MustNewDecFromStr("0.09"),
 				},
 			},
+			ConsensusPubkey: pubKey,
 		},
 	}, res)
 }
 
 func TestAllianceNonCompliantValUnbonded(t *testing.T) {
 	// GIVEN
+	os.Setenv("TERRA_LCD_URL", "mock")
 	os.Setenv("NODE_GRPC_URL", "mock")
 	os.Setenv("STATION_API", "mock")
 	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
 
 	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	pubKey, _ := codecTypes.NewAnyWithValue(secp256k1.GenPrivKey().PubKey())
 	stakingValidators := []stakingtypes.Validator{
 		{
 			Status:          stakingtypes.Unbonded,
@@ -354,9 +361,10 @@ func TestAllianceNonCompliantValUnbonded(t *testing.T) {
 			Jailed:          false,
 			Commission: stakingtypes.Commission{
 				CommissionRates: stakingtypes.CommissionRates{
-					Rate: sdktypes.MustNewDecFromStr("0.09"),
+					Rate: sdk.MustNewDecFromStr("0.09"),
 				},
 			},
+			ConsensusPubkey: pubKey,
 		},
 	}
 	proposalsVotes := []types.StationVote{
@@ -372,7 +380,7 @@ func TestAllianceNonCompliantValUnbonded(t *testing.T) {
 	}
 	seniorValidators := []*tmservice.Validator{
 		{
-			Address: "val1",
+			PubKey: pubKey,
 		},
 	}
 
@@ -385,11 +393,13 @@ func TestAllianceNonCompliantValUnbonded(t *testing.T) {
 
 func TestAllianceNonCompliantValJailed(t *testing.T) {
 	// GIVEN
+	os.Setenv("TERRA_LCD_URL", "mock")
 	os.Setenv("NODE_GRPC_URL", "mock")
 	os.Setenv("STATION_API", "mock")
 	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
 
 	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	pubKey, _ := codecTypes.NewAnyWithValue(secp256k1.GenPrivKey().PubKey())
 	stakingValidators := []stakingtypes.Validator{
 		{
 			Status:          stakingtypes.Bonded,
@@ -397,9 +407,10 @@ func TestAllianceNonCompliantValJailed(t *testing.T) {
 			Jailed:          true,
 			Commission: stakingtypes.Commission{
 				CommissionRates: stakingtypes.CommissionRates{
-					Rate: sdktypes.MustNewDecFromStr("0.09"),
+					Rate: sdk.MustNewDecFromStr("0.09"),
 				},
 			},
+			ConsensusPubkey: pubKey,
 		},
 	}
 	proposalsVotes := []types.StationVote{
@@ -415,7 +426,7 @@ func TestAllianceNonCompliantValJailed(t *testing.T) {
 	}
 	seniorValidators := []*tmservice.Validator{
 		{
-			Address: "val1",
+			PubKey: pubKey,
 		},
 	}
 
@@ -428,11 +439,13 @@ func TestAllianceNonCompliantValJailed(t *testing.T) {
 
 func TestAllianceNonCompliantValHighComissions(t *testing.T) {
 	// GIVEN
+	os.Setenv("TERRA_LCD_URL", "mock")
 	os.Setenv("NODE_GRPC_URL", "mock")
 	os.Setenv("STATION_API", "mock")
 	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
 
 	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	pubKey, _ := codecTypes.NewAnyWithValue(secp256k1.GenPrivKey().PubKey())
 	stakingValidators := []stakingtypes.Validator{
 		{
 			Status:          stakingtypes.Bonded,
@@ -440,9 +453,10 @@ func TestAllianceNonCompliantValHighComissions(t *testing.T) {
 			Jailed:          false,
 			Commission: stakingtypes.Commission{
 				CommissionRates: stakingtypes.CommissionRates{
-					Rate: sdktypes.MustNewDecFromStr("0.11"),
+					Rate: sdk.MustNewDecFromStr("0.11"),
 				},
 			},
+			ConsensusPubkey: pubKey,
 		},
 	}
 	proposalsVotes := []types.StationVote{
@@ -458,7 +472,7 @@ func TestAllianceNonCompliantValHighComissions(t *testing.T) {
 	}
 	seniorValidators := []*tmservice.Validator{
 		{
-			Address: "val1",
+			PubKey: pubKey,
 		},
 	}
 
@@ -471,11 +485,13 @@ func TestAllianceNonCompliantValHighComissions(t *testing.T) {
 
 func TestAllianceNonCompliantValNotEnoughVotes(t *testing.T) {
 	// GIVEN
+	os.Setenv("TERRA_LCD_URL", "mock")
 	os.Setenv("NODE_GRPC_URL", "mock")
 	os.Setenv("STATION_API", "mock")
 	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
 
 	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	pubKey, _ := codecTypes.NewAnyWithValue(secp256k1.GenPrivKey().PubKey())
 	stakingValidators := []stakingtypes.Validator{
 		{
 			Status:          stakingtypes.Bonded,
@@ -483,9 +499,10 @@ func TestAllianceNonCompliantValNotEnoughVotes(t *testing.T) {
 			Jailed:          false,
 			Commission: stakingtypes.Commission{
 				CommissionRates: stakingtypes.CommissionRates{
-					Rate: sdktypes.MustNewDecFromStr("0.09"),
+					Rate: sdk.MustNewDecFromStr("0.09"),
 				},
 			},
+			ConsensusPubkey: pubKey,
 		},
 	}
 	proposalsVotes := []types.StationVote{
@@ -498,7 +515,7 @@ func TestAllianceNonCompliantValNotEnoughVotes(t *testing.T) {
 	}
 	seniorValidators := []*tmservice.Validator{
 		{
-			Address: "val1",
+			PubKey: pubKey,
 		},
 	}
 
@@ -510,12 +527,15 @@ func TestAllianceNonCompliantValNotEnoughVotes(t *testing.T) {
 }
 
 func TestAllianceNonCompliantValNotSenior(t *testing.T) {
+
 	// GIVEN
+	os.Setenv("TERRA_LCD_URL", "mock")
 	os.Setenv("NODE_GRPC_URL", "mock")
 	os.Setenv("STATION_API", "mock")
 	os.Setenv("ALLIANCE_HUB_CONTRACT_ADDRESS", "mock")
 
 	avp := alliance_provider.NewAllianceValidatorsProvider(nil, nil)
+	pubKey, _ := codecTypes.NewAnyWithValue(secp256k1.GenPrivKey().PubKey())
 	stakingValidators := []stakingtypes.Validator{
 		{
 			Status:          stakingtypes.Bonded,
@@ -523,9 +543,10 @@ func TestAllianceNonCompliantValNotSenior(t *testing.T) {
 			Jailed:          false,
 			Commission: stakingtypes.Commission{
 				CommissionRates: stakingtypes.CommissionRates{
-					Rate: sdktypes.MustNewDecFromStr("0.09"),
+					Rate: sdk.MustNewDecFromStr("0.09"),
 				},
 			},
+			ConsensusPubkey: pubKey,
 		},
 	}
 	proposalsVotes := []types.StationVote{
@@ -541,7 +562,7 @@ func TestAllianceNonCompliantValNotSenior(t *testing.T) {
 	}
 	seniorValidators := []*tmservice.Validator{
 		{
-			Address: "val2",
+			PubKey: nil,
 		},
 	}
 

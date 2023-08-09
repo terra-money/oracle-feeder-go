@@ -18,3 +18,9 @@ type StationVote struct {
 }
 
 type StationVotes = []StationVote
+
+type GovRes struct {
+	Proposals []struct {
+		Id string `json:"id"`
+	} `json:"proposals"`
+}
