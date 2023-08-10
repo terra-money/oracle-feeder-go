@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -478,22 +479,28 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 }
 
 func (p *allianceValidatorsProvider) getProposals(ctx context.Context) (stationProposals []types.StationVote, err error) {
-	passedProposalsUrl := "/cosmos/gov/v1/proposals?proposal_status=3&pagination.limit=3&pagination.reverse=true"
-	rejectedProposalsUrl := "/cosmos/gov/v1/proposals?proposal_status=4&pagination.limit=3&pagination.reverse=true"
-	passedProposalsRes, err := p.queryProposalsFromLcd(passedProposalsUrl)
+	passedProposalsUrl := "/cosmos/gov/v1/proposals?proposal_status=3&pagination.limit=2&pagination.reverse=true"
+	rejectedProposalsUrl := "/cosmos/gov/v1/proposals?proposal_status=4&pagination.limit=2&pagination.reverse=true"
+	passedProposalsIDs, err := p.queryProposalIDs(passedProposalsUrl)
 	if err != nil {
 		return stationProposals, err
 	}
-	rejectedProposalsRes, err := p.queryProposalsFromLcd(rejectedProposalsUrl)
+	rejectedProposalsIDs, err := p.queryProposalIDs(rejectedProposalsUrl)
 	if err != nil {
 		return stationProposals, err
 	}
 
-	proposals := append(passedProposalsRes.Proposals, rejectedProposalsRes.Proposals...)
+	// Merge the passed and rejected proposals IDs
+	// and sort them to get the latest 3 proposals
+	proposalsIDs := append(passedProposalsIDs, rejectedProposalsIDs...)
+	sort.Slice(proposalsIDs, func(i, j int) bool {
+		return proposalsIDs[i] > proposalsIDs[j]
+	})
+	proposalsIDs = proposalsIDs[:3]
 
 	// Iterate over the proposals and request the latest votes
-	for _, proposal := range proposals {
-		stationProposalsRes, err := p.queryStation(proposal.Id)
+	for _, proposalID := range proposalsIDs {
+		stationProposalsRes, err := p.queryStation(proposalID)
 		if err != nil {
 			return stationProposals, err
 		}
@@ -502,7 +509,7 @@ func (p *allianceValidatorsProvider) getProposals(ctx context.Context) (stationP
 	return stationProposals, err
 }
 
-func (p allianceValidatorsProvider) queryProposalsFromLcd(urlSuffix string) (resGov *types.GovRes, err error) {
+func (p allianceValidatorsProvider) queryProposalIDs(urlSuffix string) (proposalIDs []int64, err error) {
 	url := p.terraLcdUrl + urlSuffix
 
 	// Send GET request
@@ -517,6 +524,7 @@ func (p allianceValidatorsProvider) queryProposalsFromLcd(urlSuffix string) (res
 	if err != nil {
 		return nil, err
 	}
+	var resGov *types.GovRes
 
 	// Parse JSON response into struct
 	err = json.Unmarshal(body, &resGov)
@@ -524,12 +532,21 @@ func (p allianceValidatorsProvider) queryProposalsFromLcd(urlSuffix string) (res
 		return nil, err
 	}
 
+	for _, proposal := range resGov.Proposals {
+		propID, err := strconv.ParseInt(proposal.Id, 10, 64)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return nil, err
+		}
+		proposalIDs = append(proposalIDs, propID)
+	}
+
 	// Access parsed data
-	return resGov, nil
+	return proposalIDs, nil
 }
 
-func (p allianceValidatorsProvider) queryStation(propId string) (res *[]types.StationVote, err error) {
-	url := p.stationApiUrl + "/proposals/" + propId
+func (p allianceValidatorsProvider) queryStation(propId int64) (res *[]types.StationVote, err error) {
+	url := p.stationApiUrl + "/proposals/" + fmt.Sprint(propId)
 	// Send GET request
 	resp, err := http.Get(url)
 	if err != nil {
