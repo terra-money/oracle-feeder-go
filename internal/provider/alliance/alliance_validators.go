@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -21,7 +22,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/types/query"
 
 	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
-	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
 	stakingtypes "github.com/cosmos/cosmos-sdk/x/staking/types"
 	alliancetypes "github.com/terra-money/alliance/x/alliance/types"
 )
@@ -31,6 +31,7 @@ type allianceValidatorsProvider struct {
 	config                             *config.AllianceConfig
 	providerManager                    *provider.ProviderManager
 	nodeGrpcUrl                        string
+	terraLcdUrl                        string
 	stationApiUrl                      string
 	allianceHubContractAddress         string
 	blocksToBeSeniorValidator          int64
@@ -38,6 +39,11 @@ type allianceValidatorsProvider struct {
 }
 
 func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManager *provider.ProviderManager) *allianceValidatorsProvider {
+	var terraLcdUrl string
+	if terraLcdUrl = os.Getenv("TERRA_LCD_URL"); len(terraLcdUrl) == 0 {
+		panic("TERRA_LCD_URL env variable is not set!")
+	}
+
 	var nodeGrpcUrl string
 	if nodeGrpcUrl = os.Getenv("NODE_GRPC_URL"); len(nodeGrpcUrl) == 0 {
 		panic("NODE_GRPC_URL env variable is not set!")
@@ -78,6 +84,7 @@ func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManage
 	return &allianceValidatorsProvider{
 		BaseGrpc:                           *internal.NewBaseGrpc(),
 		config:                             config,
+		terraLcdUrl:                        terraLcdUrl,
 		nodeGrpcUrl:                        nodeGrpcUrl,
 		stationApiUrl:                      stationApiUrl,
 		providerManager:                    providerManager,
@@ -92,7 +99,48 @@ func NewAllianceValidatorsProvider(config *config.AllianceConfig, providerManage
 // the following rules:
 // (1) - be part of the active validator set,
 // (2) - to do not be jailed,
-// (3) - commission rate to be lower than 19%,
+// (3) - commission rate to be lower than 10%,
+// (4) - Participate in the latest 3 gov proposals,
+// (5) - have been in the active validator set 100 000 blocks before the current one, (1 week approx)
+func (p *allianceValidatorsProvider) GetAllianceInitialDelegations(ctx context.Context) (*pkgtypes.MsgAllianceDelegations, error) {
+	smartContractRes, err := p.querySmartContractConfig(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	stakingValidators, seniorValidators, proposalsVotes, _, err := p.queryValidatorsData(ctx)
+	if err != nil {
+		return nil, err
+	}
+	compliantVals := p.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
+	allianceTokenSupply, err := strconv.ParseInt(smartContractRes.AllianceTokenSupply, 10, 64)
+	if err != nil {
+		panic(err)
+	}
+	tokensPerVal := allianceTokenSupply / int64(len(compliantVals))
+
+	var delegations []types.Delegation
+	for i := 0; i < len(compliantVals); i++ {
+		delegations = append(
+			delegations,
+			types.NewDelegation(
+				compliantVals[i].OperatorAddress,
+				fmt.Sprint(tokensPerVal),
+			),
+		)
+	}
+
+	res := pkgtypes.NewMsgAllianceDelegations(delegations)
+
+	return &res, nil
+}
+
+// Query Terra GRPC, station API and return the list of alliance
+// redelegations that can be submitted to Alliance Hub applying
+// the following rules:
+// (1) - be part of the active validator set,
+// (2) - to do not be jailed,
+// (3) - commission rate to be lower than 10%,
 // (4) - Participate in the latest 3 gov proposals,
 // (5) - have been in the active validator set 100 000 blocks before the current one, (1 week approx)
 func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Context) (*pkgtypes.MsgAllianceRedelegate, error) {
@@ -106,40 +154,8 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 		return nil, err
 	}
 
-	var compliantVals []stakingtypes.Validator
-	// Apply the previous rules to filter the list
-	// of all blockchain validators to keep the ones
-	// that are compliant
-	for _, val := range stakingValidators {
-		// (1) skip if status is not bonded (again in case the api have a bug with the query)
-		if val.GetStatus() != stakingtypes.Bonded {
-			continue
-		}
-
-		// (2) skip if jailed
-		if val.IsJailed() {
-			continue
-		}
-
-		// (3) skip if commission is grater than 19%
-		if val.Commission.CommissionRates.Rate.GT(sdktypes.MustNewDecFromStr("0.19")) {
-			continue
-		}
-
-		// (4) skip if have not voted in the last 3 proposals
-		if !p.votedForLatestProposals(proposalsVotes, val.OperatorAddress) {
-			continue
-		}
-
-		// (5) skip if it have not been in the active validator set 100 000 blocks before the current one
-		for _, seniorValidator := range seniorValidators {
-			if val.OperatorAddress != seniorValidator.Address {
-				continue
-			}
-		}
-
-		compliantVals = append(compliantVals, val)
-	}
+	// Apply the previous rules to filter the list of validators
+	compliantVals := p.GetCompliantValidators(stakingValidators, proposalsVotes, seniorValidators)
 
 	valsWithAllianceTokens, totalAllianceStakedTokens := FilterAllianceValsWithStake(allianceVals, smartContractRes.AllianceTokenDenom)
 	compliantValsWithAllianceTokens,
@@ -155,6 +171,51 @@ func (p *allianceValidatorsProvider) GetAllianceRedelegateReq(ctx context.Contex
 	res := pkgtypes.NewMsgAllianceRedelegate(redelegations)
 
 	return &res, nil
+}
+
+// Apply the rules to filter the list of validators
+// (1) - be part of the active validator set,
+// (2) - to do not be jailed,
+// (3) - commission rate to be lower than 10%,
+// (4) - Participate in the latest 3 gov proposals,
+// (5) - have been in the active validator set 100 000 blocks before the current one, (1 week approx)
+func (p *allianceValidatorsProvider) GetCompliantValidators(stakingValidators []stakingtypes.Validator, proposalsVotes []types.StationVote, seniorValidators []*tmservice.Validator) []stakingtypes.Validator {
+	var compliantVals []stakingtypes.Validator
+
+	// of all blockchain validators to keep the ones
+	// that are compliant
+	for _, val := range stakingValidators {
+
+		// (1) skip if status is not bonded (again in case the api have a bug with the query)
+		if val.GetStatus() != stakingtypes.Bonded {
+			continue
+		}
+
+		// (2) skip if jailed
+		if val.IsJailed() {
+			continue
+		}
+
+		// (3) skip if commission is grater than 10%
+		if val.Commission.CommissionRates.Rate.GT(sdktypes.MustNewDecFromStr("0.10")) {
+			continue
+		}
+
+		// (4) skip if have not voted in the last 3 proposals
+		if !p.votedForLatestProposals(proposalsVotes, val.OperatorAddress) {
+			continue
+		}
+
+		for _, seniorValidator := range seniorValidators {
+			// (5) if the validator is a senior one add to the array
+			if seniorValidator.PubKey.Equal(val.ConsensusPubkey) {
+				compliantVals = append(compliantVals, val)
+				continue
+			}
+		}
+	}
+
+	return compliantVals
 }
 
 // In charge of rebalancing the stake from non-compliant validators to compliant ones.
@@ -366,7 +427,6 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 	defer grpcConn.Close()
 
 	nodeClient := tmservice.NewServiceClient(grpcConn)
-	govClient := govtypes.NewQueryClient(grpcConn)
 	stakingClient := stakingtypes.NewQueryClient(grpcConn)
 	allianceClient := alliancetypes.NewQueryClient(grpcConn)
 
@@ -378,17 +438,6 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 	})
 	if err != nil {
 		fmt.Printf("valsRes: %v \n", err)
-		return nil, nil, nil, nil, err
-	}
-
-	govPropsRes, err := govClient.Proposals(ctx, &govtypes.QueryProposalsRequest{
-		Pagination: &query.PageRequest{
-			Limit:   3,
-			Reverse: true,
-		},
-	})
-	if err != nil {
-		fmt.Printf("govPropsRes: %v \n", err)
 		return nil, nil, nil, nil, err
 	}
 
@@ -406,7 +455,7 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 		return nil, nil, nil, nil, err
 	}
 
-	proposalsVotesRes, err := p.getProposalsVotesFromStationAPI(ctx, govPropsRes.Proposals)
+	proposalsVotesRes, err := p.getProposals(ctx)
 	if err != nil {
 		fmt.Printf("proposalsVotesRes: %v \n", err)
 		return nil, nil, nil, nil, err
@@ -429,19 +478,74 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 		nil
 }
 
-func (p *allianceValidatorsProvider) getProposalsVotesFromStationAPI(ctx context.Context, proposals []*govtypes.Proposal) (stationProposals []types.StationVote, err error) {
-	for _, proposal := range proposals {
-		stationProposalsRes, err := p.queryStation(proposal.Id)
+func (p *allianceValidatorsProvider) getProposals(ctx context.Context) (stationProposals []types.StationVote, err error) {
+	passedProposalsUrl := "/cosmos/gov/v1/proposals?proposal_status=3&pagination.limit=2&pagination.reverse=true"
+	rejectedProposalsUrl := "/cosmos/gov/v1/proposals?proposal_status=4&pagination.limit=2&pagination.reverse=true"
+	passedProposalsIDs, err := p.queryProposalIDs(passedProposalsUrl)
+	if err != nil {
+		return stationProposals, err
+	}
+	rejectedProposalsIDs, err := p.queryProposalIDs(rejectedProposalsUrl)
+	if err != nil {
+		return stationProposals, err
+	}
+
+	// Merge the passed and rejected proposals IDs
+	// and sort them to get the latest 3 proposals
+	proposalsIDs := append(passedProposalsIDs, rejectedProposalsIDs...)
+	sort.Slice(proposalsIDs, func(i, j int) bool {
+		return proposalsIDs[i] > proposalsIDs[j]
+	})
+	proposalsIDs = proposalsIDs[:3]
+
+	// Iterate over the proposals and request the latest votes
+	for _, proposalID := range proposalsIDs {
+		stationProposalsRes, err := p.queryStation(proposalID)
 		if err != nil {
 			return stationProposals, err
 		}
 		stationProposals = append(stationProposals, *stationProposalsRes...)
 	}
-
 	return stationProposals, err
 }
 
-func (p allianceValidatorsProvider) queryStation(propId uint64) (res *[]types.StationVote, err error) {
+func (p allianceValidatorsProvider) queryProposalIDs(urlSuffix string) (proposalIDs []int64, err error) {
+	url := p.terraLcdUrl + urlSuffix
+
+	// Send GET request
+	res, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	// Read response body
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	var resGov *types.GovRes
+
+	// Parse JSON response into struct
+	err = json.Unmarshal(body, &resGov)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, proposal := range resGov.Proposals {
+		propID, err := strconv.ParseInt(proposal.Id, 10, 64)
+		if err != nil {
+			fmt.Println("Error:", err)
+			return nil, err
+		}
+		proposalIDs = append(proposalIDs, propID)
+	}
+
+	// Access parsed data
+	return proposalIDs, nil
+}
+
+func (p allianceValidatorsProvider) queryStation(propId int64) (res *[]types.StationVote, err error) {
 	url := p.stationApiUrl + "/proposals/" + fmt.Sprint(propId)
 	// Send GET request
 	resp, err := http.Get(url)

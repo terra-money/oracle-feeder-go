@@ -29,3 +29,7 @@ func (p *allianceProvider) GetProtocolsInfo(ctx context.Context) (*types.MsgUpda
 func (p *allianceProvider) GetAllianceRedelegateReq(ctx context.Context) (*types.MsgAllianceRedelegate, error) {
 	return p.allianceValidatorsProvider.GetAllianceRedelegateReq(ctx)
 }
+
+func (p *allianceProvider) GetAllianceInitialDelegations(ctx context.Context) (*types.MsgAllianceDelegations, error) {
+	return p.allianceValidatorsProvider.GetAllianceInitialDelegations(ctx)
+}

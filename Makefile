@@ -3,6 +3,9 @@
 #################################################
 ###                   START                   ###
 #################################################
+start-alliance-initial-delegation:
+	go run ./cmd/feeder/feeder.go alliance-initial-delegation
+
 start-alliance-oracle-feeder:
 	go run ./cmd/feeder/feeder.go alliance-oracle-feeder
 
