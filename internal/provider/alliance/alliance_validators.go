@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -479,13 +480,11 @@ func (p *allianceValidatorsProvider) queryValidatorsData(ctx context.Context) (
 }
 
 func (p *allianceValidatorsProvider) getProposals(ctx context.Context) (stationProposals []types.StationVote, err error) {
-	passedProposalsUrl := "/cosmos/gov/v1/proposals?proposal_status=3&pagination.limit=2&pagination.reverse=true"
-	rejectedProposalsUrl := "/cosmos/gov/v1/proposals?proposal_status=4&pagination.limit=2&pagination.reverse=true"
-	passedProposalsIDs, err := p.queryProposalIDs(passedProposalsUrl)
+	passedProposalsIDs, err := p.queryProposalIDs("3")
 	if err != nil {
 		return stationProposals, err
 	}
-	rejectedProposalsIDs, err := p.queryProposalIDs(rejectedProposalsUrl)
+	rejectedProposalsIDs, err := p.queryProposalIDs("4")
 	if err != nil {
 		return stationProposals, err
 	}
@@ -509,8 +508,13 @@ func (p *allianceValidatorsProvider) getProposals(ctx context.Context) (stationP
 	return stationProposals, err
 }
 
-func (p allianceValidatorsProvider) queryProposalIDs(urlSuffix string) (proposalIDs []int64, err error) {
-	url := p.terraLcdUrl + urlSuffix
+func (p allianceValidatorsProvider) queryProposalIDs(proposalStatus string) (proposalIDs []int64, err error) {
+	queryParams := url.Values{}
+	queryParams.Add("proposal_status", proposalStatus)
+	queryParams.Add("pagination.limit", "2")
+	queryParams.Add("pagination.reverse", "true")
+
+	url := p.terraLcdUrl + "/cosmos/gov/v1/proposals?" + queryParams.Encode()
 
 	// Send GET request
 	res, err := http.Get(url)
