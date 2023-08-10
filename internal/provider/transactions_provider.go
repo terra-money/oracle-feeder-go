@@ -252,7 +252,8 @@ func (p *TransactionsProvider) getTxClients() (client.TxBuilder, client.TxConfig
 func (p *TransactionsProvider) getContractAddress() string {
 	if p.feederType == types.AllianceUpdateRewards ||
 		p.feederType == types.AllianceRebalanceEmissions ||
-		p.feederType == types.AllianceRebalanceFeeder {
+		p.feederType == types.AllianceRebalanceFeeder ||
+		p.feederType == types.AllianceInitialDelegation {
 		return p.allianceHubContractAddress
 	} else if p.feederType == types.AllianceOracleFeeder {
 		return p.oracleAddress

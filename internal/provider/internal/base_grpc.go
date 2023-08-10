@@ -6,6 +6,9 @@ import (
 	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
+	codecTypes "github.com/cosmos/cosmos-sdk/codec/types"
+	govtypesv1 "github.com/cosmos/cosmos-sdk/x/gov/types/v1"
+	govtypes "github.com/cosmos/cosmos-sdk/x/gov/types/v1beta1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
@@ -22,8 +25,8 @@ func (p *BaseGrpc) Connection(
 	ctx context.Context,
 	nodeUrl string,
 ) (*grpc.ClientConn, error) {
-	var authCredentials = grpc.WithTransportCredentials(insecure.NewCredentials())
-	var callOptions = grpc.WithDefaultCallOptions()
+	authCredentials := grpc.WithTransportCredentials(insecure.NewCredentials())
+	callOptions := grpc.WithDefaultCallOptions()
 
 	if strings.Contains(nodeUrl, ":443") {
 		authCredentials = grpc.WithTransportCredentials(credentials.NewTLS(&tls.Config{}))
@@ -39,4 +42,13 @@ func (p *BaseGrpc) Connection(
 		authCredentials,
 		callOptions,
 	)
+}
+
+func (p *BaseGrpc) GetCallOption() grpc.CallOption {
+	interfaceRegistry := codecTypes.NewInterfaceRegistry()
+
+	govtypes.RegisterInterfaces(interfaceRegistry)
+	govtypesv1.RegisterInterfaces(interfaceRegistry)
+
+	return grpc.ForceCodec(codec.NewProtoCodec(interfaceRegistry).GRPCCodec())
 }
