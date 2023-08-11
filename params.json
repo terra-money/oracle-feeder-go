@@ -9,7 +9,7 @@
     },
     "develop": {
         "price_server_port": "8532",
-        "oracle_address": "terra19cs0qcqpa5n7wlqjlhvfe235kc20g52enwr0d5cdar5zkmza7skqv54070",
+        "oracle_address": "terra1w8ta7vhpzwe0y99tvvtp7k0k8uex2jq8jts8k2hsyg009ya06qts5fwftt",
         "alliance_hub_contract_address": "terra1q95pe55eea0akft0xezak2s50l4vkkquve5emw7gzw65a7ptdl8qel50ea",
         "feeder_retries": 4,
         "blocks_to_be_senior_validator": 10000,
