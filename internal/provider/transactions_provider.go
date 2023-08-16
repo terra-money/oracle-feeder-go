@@ -33,7 +33,7 @@ type TransactionsProvider struct {
 	address                    sdk.AccAddress
 	prefix                     string
 	denom                      string
-	chainId                    string
+	ChainId                    string
 	feederType                 types.FeederType
 }
 
@@ -60,8 +60,8 @@ func NewTransactionsProvider(
 		panic("ALLIANCE_HUB_CONTRACT_ADDRESS env variable is not set!")
 	}
 
-	var chainId string
-	if chainId = os.Getenv("CHAIN_ID"); len(chainId) == 0 {
+	var ChainId string
+	if ChainId = os.Getenv("CHAIN_ID"); len(ChainId) == 0 {
 		panic("ORACLE_ADDRESS env variable is not set!")
 	}
 
@@ -80,7 +80,7 @@ func NewTransactionsProvider(
 		oracleAddress:              oracleAddress,
 		allianceHubContractAddress: allianceHubContractAddress,
 		feederType:                 feederType,
-		chainId:                    chainId,
+		ChainId:                    ChainId,
 		prefix:                     "terra",
 		denom:                      "uluna",
 	}
@@ -137,7 +137,7 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	signMode := txConfig.SignModeHandler().DefaultMode()
 
 	signerData := signing.SignerData{
-		ChainID:       p.chainId,
+		ChainID:       p.ChainId,
 		AccountNumber: account.GetAccountNumber(),
 		Sequence:      accSeq,
 	}
