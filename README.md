@@ -140,7 +140,7 @@ Examples of how to use the feeder are available in the [Makefile](./Makefile)
 
 1. Install [Go 1.20+](https://golang.org/).
 
-2. Define the following variables in the `params.json` file. These variables can also be found in [.env.example](.env.example):
+2. Define the following variables in the `.env` file. These variables can also be found in [.env.example](.env.example):
 
     **Note:** Keep in mind that the mnemonic below must be the same as `controller_addr` and `controller` from the deployed smart contracts on chain.
 
