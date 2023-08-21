@@ -42,7 +42,7 @@ func FromFeederTypeToPriceServerUrl(feederType FeederType) string {
 	case AllianceRebalanceFeeder:
 		return "/alliance/rebalance"
 	case AllianceInitialDelegation:
-		return "/alliance/rebalance"
+		return "/alliance/delegations"
 	default:
 		return ""
 	}
