@@ -125,7 +125,7 @@ func (p *allianceProtocolsInfo) GetProtocolsInfo(ctx context.Context) (*pkgtypes
 			annualProvisionsRes, err = p.CarbonProvider.GetAnnualProvisions(ctx)
 		} else {
 			annualProvisionsRes, err = mintClient.AnnualProvisions(ctx, &mintypes.QueryAnnualProvisionsRequest{})
-
+			annualProvisionsRes.AnnualProvisions = annualProvisionsRes.AnnualProvisions.QuoInt64(1000000)
 		}
 		if err != nil {
 			fmt.Printf("annualProvisionsRes: %v \n", err)
