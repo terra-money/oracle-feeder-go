@@ -52,6 +52,7 @@ func (a alliancesQuerierProvider) QueryAndSubmitOnChain(ctx context.Context) (st
 	if err != nil {
 		return "", fmt.Errorf("ERROR querying alliances data %w", err)
 	}
+  
 	return a.transactionsProvider.SubmitAlliancesTransaction(ctx, res)
 }
 
