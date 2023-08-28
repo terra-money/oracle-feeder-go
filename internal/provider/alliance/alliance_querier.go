@@ -30,7 +30,8 @@ func NewAlliancesQuerierProvider(feederType types.FeederType) *alliancesQuerierP
 
 func (a alliancesQuerierProvider) SubmitTx(ctx context.Context) (hash string, err error) {
 	if a.feederType == types.AllianceOracleFeeder ||
-		a.feederType == types.AllianceRebalanceFeeder {
+		a.feederType == types.AllianceRebalanceFeeder ||
+		a.feederType == types.AllianceInitialDelegation {
 		hash, err = a.QueryAndSubmitOnChain(ctx)
 	} else {
 		hash, err = a.SubmitOnChain(ctx)
@@ -51,7 +52,7 @@ func (a alliancesQuerierProvider) QueryAndSubmitOnChain(ctx context.Context) (st
 	if err != nil {
 		return "", fmt.Errorf("ERROR querying alliances data %w", err)
 	}
-
+  
 	return a.transactionsProvider.SubmitAlliancesTransaction(ctx, res)
 }
 

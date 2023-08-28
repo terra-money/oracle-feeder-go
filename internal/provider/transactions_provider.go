@@ -178,8 +178,11 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	// set the gas needed with some allowance
 	gasUsed := simRes.GetGasInfo().GetGasUsed()
 
+	// calculate fee
+	fee := sdk.NewIntFromUint64(uint64(float64(gasUsed) * 0.0155 * 1.5))
+
 	// set fee amount from gasused
-	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(p.denom, sdk.NewIntFromUint64(uint64(float64(gasUsed)*1.2)))))
+	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(p.denom, fee)))
 
 	txBuilder.SetGasLimit(uint64(float64(gasUsed) * 1.5))
 	if err != nil {

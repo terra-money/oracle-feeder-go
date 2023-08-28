@@ -54,10 +54,10 @@ func (p *CarbonProvider) GetAnnualProvisions(ctx context.Context) (*mintypes.Que
 		return nil, err
 	}
 
-	baseDenomAmount := sdktypes.NewDecWithPrec(bankRes.Amount.Amount.Int64(), 6)
+	baseDenomAmount := sdktypes.NewDecWithPrec(bankRes.Amount.Amount.Int64(), 8)
 
 	return &mintypes.QueryAnnualProvisionsResponse{
-		AnnualProvisions: annualInflation.Result.InflationRate.Mul(baseDenomAmount).Add(baseDenomAmount),
+		AnnualProvisions: annualInflation.Result.InflationRate.Mul(baseDenomAmount),
 	}, nil
 }
 
