@@ -21,8 +21,10 @@ type CarbonProvider struct {
 
 type inflation struct {
 	Result struct {
-		InflationRate sdktypes.Dec `json:"inflationRate"`
-		NumberOfWeeks string       `json:"numberOfWeeks"`
+		InflationRate           sdktypes.Dec `json:"inflationRate"`
+		Last7DaysInflationRate  sdktypes.Dec `json:"last7DaysInflationRate"`
+		Last14DaysInflationRate sdktypes.Dec `json:"last14DaysInflationRate"`
+		NumberOfWeeks           string       `json:"numberOfWeeks"`
 	} `json:"result"`
 }
 
@@ -49,15 +51,19 @@ func (p *CarbonProvider) GetAnnualProvisions(ctx context.Context) (*mintypes.Que
 		return nil, err
 	}
 
-	annualInflation, err := p.getAnnualInflation()
+	annualInflationRes, err := p.getAnnualInflation()
 	if err != nil {
 		return nil, err
+	}
+	annualInflation := annualInflationRes.Result.Last14DaysInflationRate
+	if annualInflation.IsNil() || annualInflation.IsZero() {
+		annualInflation = annualInflationRes.Result.InflationRate
 	}
 
 	baseDenomAmount := sdktypes.NewDecWithPrec(bankRes.Amount.Amount.Int64(), 8)
 
 	return &mintypes.QueryAnnualProvisionsResponse{
-		AnnualProvisions: annualInflation.Result.InflationRate.Mul(baseDenomAmount),
+		AnnualProvisions: annualInflation.Mul(baseDenomAmount),
 	}, nil
 }
 
