@@ -60,6 +60,10 @@ func (p *CarbonProvider) GetAnnualProvisions(ctx context.Context) (*mintypes.Que
 		annualInflation = annualInflationRes.Result.InflationRate
 	}
 
+	if annualInflation.IsNil() || annualInflation.IsZero() {
+		panic("annual inflation is zero")
+	}
+
 	baseDenomAmount := sdktypes.NewDecWithPrec(bankRes.Amount.Amount.Int64(), 8)
 
 	return &mintypes.QueryAnnualProvisionsResponse{
