@@ -220,7 +220,7 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	// Increase cached account sequence before broadcasting tx
 	bRes, err := queryClient.BroadcastTx(ctx,
 		&txTypes.BroadcastTxRequest{
-			Mode:    txTypes.BroadcastMode_BROADCAST_MODE_BLOCK,
+			Mode:    txTypes.BroadcastMode_BROADCAST_MODE_SYNC,
 			TxBytes: txBytes,
 		},
 	)
