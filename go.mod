@@ -13,7 +13,7 @@ require (
 	github.com/tendermint/tmlibs v0.9.0
 	github.com/terra-money/alliance v0.3.2
 	golang.org/x/exp v0.0.0-20230711153332-06a737ee72cb
-	google.golang.org/grpc v1.57.0
+	google.golang.org/grpc v1.57.1
 )
 
 require (
