@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/terra-money/oracle-feeder-go/config"
@@ -25,6 +26,13 @@ func main() {
 	allianceProvider := alliance_provider.NewAllianceProvider(&config.AllianceDefaultConfig, manager)
 
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:  []string{"https://*.terra.money"},
+		AllowMethods:  []string{"GET", "OPTIONS"},
+		AllowHeaders:  []string{"Origin"},
+		ExposeHeaders: []string{"Content-Length"},
+	}))
+
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "OK")
 	})
