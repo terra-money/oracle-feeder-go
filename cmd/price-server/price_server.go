@@ -17,7 +17,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Print("Error loading .env file:", err)
+		log.Print("Error loading .env file: ", err)
 	}
 	ctx := context.Background()
 
@@ -42,7 +42,7 @@ func main() {
 	})
 	r.GET("/alliance/protocol", func(c *gin.Context) {
 		allianceProtocolRes, err := allianceProvider.GetProtocolsInfo(ctx)
-		// allianceProtocolRes.UpdateChainsInfo.ChainsInfo.ProtocolsInfo[0].ChainId = "narwhal-1"
+		allianceProtocolRes.UpdateChainsInfo.ChainsInfo.ProtocolsInfo[0].ChainId = "narwhal-1"
 		// allianceProtocolRes.UpdateChainsInfo.ChainsInfo.ProtocolsInfo[1].ChainId = "harpoon-4"
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, err)
