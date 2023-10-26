@@ -27,7 +27,7 @@ func main() {
 
 	r := gin.Default()
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:  []string{"https://*.terra.money"},
+		AllowOrigins:  []string{"https://alliance-dashboard.terra.money", "http://localhost"},
 		AllowMethods:  []string{"GET", "OPTIONS"},
 		AllowHeaders:  []string{"Origin"},
 		ExposeHeaders: []string{"Content-Length"},
