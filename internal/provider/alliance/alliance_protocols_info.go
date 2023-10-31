@@ -280,15 +280,21 @@ func calculateNormalizedRewardWeight(
 	alliance alliancetypes.AllianceAsset,
 ) sdktypes.Dec {
 
-	// We shouldd consider that reward weight
+	// If alliance, is not initiated return zero.
+	if !alliance.IsInitialized {
+		return sdktypes.ZeroDec()
+	}
+
+	// We should consider that reward weight
 	// starts at one because it also takes in
 	// consideration the OneDec.
 	rewardsWeight := sdktypes.OneDec()
 	for _, alliance := range alliances {
 		// When an alliance is not initialized, it means that users are not
-		// receiving rewards so NormalizedRewardWeight is zero (right now).
+		// receiving rewards so NormalizedRewardWeight for this alliance shouldn't
+		// be considered.
 		if !alliance.IsInitialized {
-			return sdktypes.ZeroDec()
+			continue
 		}
 		// If an alliance is not initialized it means that
 		// rewards are not distributed to that alliance so
