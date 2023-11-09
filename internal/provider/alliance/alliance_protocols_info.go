@@ -4,10 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 	"strconv"
 	"strings"
 	"time"
+
+	wasmtypes "github.com/CosmWasm/wasmd/x/wasm/types"
 
 	alliancetypes "github.com/terra-money/alliance/x/alliance/types"
 	"github.com/terra-money/oracle-feeder-go/config"
@@ -264,7 +265,6 @@ func (p *allianceProtocolsInfo) parseLunaAlliances(
 }
 
 func (p *allianceProtocolsInfo) pullAndMergeAllianceHubAssets(ctx context.Context, wasmClient wasmtypes.QueryClient, allianceRes *alliancetypes.QueryAlliancesResponse) (finalAlliances *alliancetypes.QueryAlliancesResponse, err error) {
-
 	// Deal with alliance hub implementations
 	for i, hubAlliance := range allianceRes.Alliances {
 		// Alliance Hub implementations need to be adding in the config
@@ -272,9 +272,10 @@ func (p *allianceProtocolsInfo) pullAndMergeAllianceHubAssets(ctx context.Contex
 		if allianceHub == "" {
 			continue
 		}
-		// Setting the alliance hub VT token reward weight to 0 since we are going to assign the reward weight to
-		// alliance hub assets
+		// Setting the alliance hub VT token reward weight to 0 since
+		// we are going to assign the reward weight to alliance hub assets
 		allianceRes.Alliances[i].RewardWeight = sdktypes.ZeroDec()
+
 		// Query the total staked balances
 		res, err := wasmClient.SmartContractState(ctx, &wasmtypes.QuerySmartContractStateRequest{
 			Address:   allianceHub,
@@ -283,6 +284,7 @@ func (p *allianceProtocolsInfo) pullAndMergeAllianceHubAssets(ctx context.Contex
 		if err != nil {
 			return finalAlliances, err
 		}
+
 		var hubBalances types.AllianceHubBalances
 		err = json.Unmarshal(res.Data, &hubBalances)
 		if err != nil {
@@ -294,6 +296,10 @@ func (p *allianceProtocolsInfo) pullAndMergeAllianceHubAssets(ctx context.Contex
 			Address:   allianceHub,
 			QueryData: []byte("{\"reward_distribution\": {}}"),
 		})
+		if err != nil {
+			return finalAlliances, err
+		}
+
 		var hubDistribution types.AllianceHubRewardDistribution
 		err = json.Unmarshal(res.Data, &hubDistribution)
 		if err != nil {
@@ -345,14 +351,23 @@ func (p *allianceProtocolsInfo) pullAndMergeAllianceHubAssets(ctx context.Contex
 	// Merge duplicated alliances by averaging the reward weight and take rate based on staked tokens
 	var allianceMap = make(map[string]alliancetypes.AllianceAsset)
 	for _, alliance := range allianceRes.Alliances {
+		// if the asset does not exist add it to the map as a new asset
+		// else merge the asset with the existing asset
 		if _, ok := allianceMap[alliance.Denom]; !ok {
 			allianceMap[alliance.Denom] = alliance
 		} else {
 			finalAlliance := allianceMap[alliance.Denom]
 			totalStaked := finalAlliance.TotalTokens.Add(alliance.TotalTokens)
-			finalAlliance.RewardWeight = finalAlliance.RewardWeight.Mul(sdktypes.NewDecFromInt(finalAlliance.TotalTokens)).Add(alliance.RewardWeight.Mul(sdktypes.NewDecFromInt(alliance.TotalTokens))).Quo(sdktypes.NewDecFromInt(totalStaked))
-			finalAlliance.TakeRate = finalAlliance.TakeRate.Mul(sdktypes.NewDecFromInt(finalAlliance.TotalTokens)).Add(alliance.TakeRate.Mul(sdktypes.NewDecFromInt(alliance.TotalTokens))).Quo(sdktypes.NewDecFromInt(totalStaked))
-			finalAlliance.TotalTokens = totalStaked
+			finalAlliance.RewardWeight = finalAlliance.RewardWeight.
+				Mul(sdktypes.NewDecFromInt(finalAlliance.TotalTokens)).
+				Add(alliance.RewardWeight.Mul(sdktypes.NewDecFromInt(alliance.TotalTokens))).
+				Quo(sdktypes.NewDecFromInt(totalStaked))
+
+			finalAlliance.TakeRate = finalAlliance.TakeRate.
+				Mul(sdktypes.NewDecFromInt(finalAlliance.TotalTokens)).
+				Add(alliance.TakeRate.
+					Mul(sdktypes.NewDecFromInt(alliance.TotalTokens))).
+				Quo(sdktypes.NewDecFromInt(totalStaked))
 			allianceMap[finalAlliance.Denom] = finalAlliance
 		}
 	}
