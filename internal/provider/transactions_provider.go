@@ -179,7 +179,7 @@ func (p *TransactionsProvider) SubmitAlliancesTransaction(
 	gasUsed := simRes.GetGasInfo().GetGasUsed()
 
 	// calculate fee
-	fee := sdk.NewIntFromUint64(uint64(float64(gasUsed) * 0.155 * 1.5))
+	fee := sdk.NewIntFromUint64(uint64(float64(gasUsed) * 0.0155 * 1.5))
 
 	// set fee amount from gasused
 	txBuilder.SetFeeAmount(sdk.NewCoins(sdk.NewCoin(p.denom, fee)))
