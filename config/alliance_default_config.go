@@ -3,7 +3,7 @@ package config
 var PHOENIX_GRPC = "terra-grpc.polkachu.com:11790"
 var MIGALOO_GRPC = "migaloo-grpc.polkachu.com:20790"
 var KUJIRA_GRPC = "kujira-grpc.polkachu.com:11890"
-var CARBON_GRPC = "rpc-carbon.tfl.foundation:443"
+var CARBON_GRPC = "carbon-grpc.polkachu.com:19690"
 
 var AllianceDefaultConfig = AllianceConfig{
 	GRPCUrls: []string{MIGALOO_GRPC, KUJIRA_GRPC, CARBON_GRPC},
