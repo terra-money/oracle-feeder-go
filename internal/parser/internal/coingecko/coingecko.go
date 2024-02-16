@@ -29,6 +29,7 @@ var COIN_GECKO_MAPPING = map[string]string{
 	"switcheo":           "SWTH",   // Carbon chain
 	"stafi-staked-swth":  "rSWTH",  // stafi-staked-swth
 	"stride-staked-luna": "STLUNA", // Stride chain
+	"osmosis":            "OSMO",
 }
 
 func ParseSymbol(symbol string) (string, string, error) {

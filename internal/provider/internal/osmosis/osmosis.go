@@ -6,15 +6,14 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	sdktypes "github.com/cosmos/cosmos-sdk/types"
 	"github.com/terra-money/oracle-feeder-go/config"
-	"github.com/terra-money/oracle-feeder-go/internal/parser"
 	internal_types "github.com/terra-money/oracle-feeder-go/internal/types"
 	"github.com/terra-money/oracle-feeder-go/pkg/types"
-	"golang.org/x/exp/maps"
 )
 
 type OsmosisEndpoint struct {
@@ -28,28 +27,33 @@ type OsmosisProvider struct {
 	mu            *sync.Mutex
 }
 
-var endpoints []OsmosisEndpoint
+var endpoints = []OsmosisEndpoint{{
+	url:  "https://osmosis-api.polkachu.com/osmosis/gamm/v1beta1/pools/${POOL_ID}",
+	used: false,
+}, {
+	url:  "https://osmosis-api.polkachu.com/osmosis/gamm/v1beta1/pools/${POOL_ID}",
+	used: false,
+}, {
+	url:  "https://lcd-osmosis.tfl.foundation/osmosis/gamm/v1beta1/pools/${POOL_ID}",
+	used: false,
+}}
 
 var whiteListPoolIds = map[string]string{
-	"ATOM/USDC": "1",
-	"AKT/USDC":  "3",
-	// "CRO/USDC": "9",      // DOUBLE CHECK
-	"JUNO/USDC": "497",
-	// "USTC/USDC": "560",   // DOUBLE CHECK
-	"SCRT/USDC":  "584",
-	"STARS/USDC": "604",
-	// "DAI/USDC": "674",    // DOUBLE CHECK
-	"OSMO/USDC": "678",
-	// "EVMOS/USDC": "722",  // DOUBLE CHECK
-	"INJ/USDC":  "725",
-	"LUNA/USDC": "726",
-	"KAVA/USDC": "730",
-	"LINK/USDC": "731",
-	// "MKR/USDC": "733",    // DOUBLE CHECK
-	// "DOT/USDC": "773",    // DOUBLE CHECK
-	"LUNC/USDC": "800",
+	"ATOM/OSMO":  "1",
+	"AKT/OSMO":   "3",
+	"JUNO/OSMO":  "497",
+	"SCRT/OSMO":  "584",
+	"STARS/OSMO": "604",
+	"USDC/OSMO":  "678",
+	"INJ/OSMO":   "725",
+	"LUNA/OSMO":  "726",
+	"KAVA/OSMO":  "730",
+	"LINK/OSMO":  "731",
+	"LUNC/OSMO":  "800",
+	"ASH/USDC":   "1360",
+	"OSMO/USDC":  "1464",
 }
-var idToSymbols = make(map[string]string)
+var idsBySymbol = make(map[string]string)
 
 func NewOsmosisProvider(config *config.ProviderConfig, stopCh <-chan struct{}) (*OsmosisProvider, error) {
 	mu := sync.Mutex{}
@@ -59,16 +63,8 @@ func NewOsmosisProvider(config *config.ProviderConfig, stopCh <-chan struct{}) (
 		mu:            &mu,
 	}
 
-	endpoints = append(endpoints, OsmosisEndpoint{
-		"https://osmosis-api.polkachu.com/osmosis/gamm/v1beta1/pools?pagination.limit=801",
-		false,
-	})
-	endpoints = append(endpoints, OsmosisEndpoint{
-		"https://lcd.osmosis.zone/osmosis/gamm/v1beta1/pools?pagination.limit=801",
-		false,
-	})
 	for k, v := range whiteListPoolIds {
-		idToSymbols[v] = k
+		idsBySymbol[v] = k
 	}
 
 	go func() {
@@ -88,23 +84,6 @@ func NewOsmosisProvider(config *config.ProviderConfig, stopCh <-chan struct{}) (
 	return provider, nil
 }
 
-func rotateUrl() (string, error) {
-	if len(endpoints) == 0 {
-		return "", fmt.Errorf("No endpoints")
-	}
-	for i := range endpoints {
-		if !endpoints[i].used {
-			endpoints[i].used = true
-			return endpoints[i].url, nil
-		}
-	}
-	for i := range endpoints {
-		endpoints[i].used = false
-	}
-	endpoints[0].used = true
-	return endpoints[0].url, nil
-}
-
 func (p *OsmosisProvider) GetPrices() map[string]types.PriceByPair {
 	result := make(map[string]types.PriceByPair)
 	p.mu.Lock()
@@ -122,115 +101,105 @@ func (p *OsmosisProvider) GetPrices() map[string]types.PriceByPair {
 }
 
 func (p *OsmosisProvider) fetchAndParse() {
-	msg, err := fetchPrices(p.config.Symbols)
-	if err != nil {
-		log.Printf("%v", err)
-	} else {
-		prices, err := parseJSON(msg)
+	for id, symbol := range idsBySymbol {
+		res, err := fetchPrice(id)
 		if err != nil {
 			log.Printf("%v", err)
-		} else {
-			p.mu.Lock()
-			maps.Copy(p.priceBySymbol, prices)
-			p.mu.Unlock()
+			continue
 		}
+		var generic internal_types.GenericPoolResponse
+		if err := json.Unmarshal(res, &generic); err != nil {
+			fmt.Println("Error:", err)
+			continue
+		}
+		price, err := p.parsePrice(generic, res)
+		if err != nil {
+			continue
+		}
+
+		p.mu.Lock()
+		p.priceBySymbol[symbol] = internal_types.PriceBySymbol{
+			Symbol:    symbol,
+			Price:     price,
+			Base:      strings.Split(symbol, "/")[0],
+			Quote:     strings.Split(symbol, "/")[1],
+			Timestamp: uint64(time.Now().Unix()),
+		}
+		p.mu.Unlock()
 	}
 }
 
-func fetchPrices(symbols []string) ([]interface{}, error) {
+func (*OsmosisProvider) parsePrice(generic internal_types.GenericPoolResponse, res []byte) (float64, error) {
+	switch generic.Pool.Type {
+	case "/osmosis.concentratedliquidity.v1beta1.Pool":
+		var pool internal_types.OsmosisPoolResponse
+		if err := json.Unmarshal(res, &pool); err != nil {
+			return 0, err
+		}
+
+		// get the first 18 positons of the price to avoid overflow
+		price := pool.Pool.CurrentSqrtPrice
+		if len(price) >= 18 {
+			price = pool.Pool.CurrentSqrtPrice[:18]
+		}
+		parsedPrice, err := sdktypes.NewDecFromStr(price)
+		if err != nil {
+			return 0, err
+		}
+		return parsedPrice.Power(2).Float64()
+	case "/osmosis.gamm.v1beta1.Pool":
+		var pool internal_types.OsmosisGammPoolResponse
+		if err := json.Unmarshal(res, &pool); err != nil {
+			return 0, err
+		}
+
+		// get the first 18 positons of the price to avoid overflow
+		firstTokenPrice := pool.Pool.PoolAssets[0].Token.Amount
+		if len(firstTokenPrice) >= 18 {
+			firstTokenPrice = firstTokenPrice[:18]
+		}
+		parsedFirstTokenPrice, err := sdktypes.NewDecFromStr(firstTokenPrice)
+		if err != nil {
+			return 0, err
+		}
+		secondTokenPrice := pool.Pool.PoolAssets[1].Token.Amount
+		if len(secondTokenPrice) >= 18 {
+			secondTokenPrice = secondTokenPrice[:18]
+		}
+		parsedSecondTokenPrice, err := sdktypes.NewDecFromStr(secondTokenPrice)
+		if err != nil {
+			return 0, err
+		}
+		return parsedSecondTokenPrice.Quo(parsedFirstTokenPrice).Float64()
+	default:
+		return 0, fmt.Errorf("unknown pool type: %s", generic.Pool.Type)
+	}
+}
+
+func fetchPrice(poolId string) (res []byte, err error) {
 	url, err := rotateUrl()
 	if err != nil {
 		return nil, err
 	}
 	client := &http.Client{Timeout: time.Second * 15}
-	resp, err := client.Get(url)
+	resp, err := client.Get(strings.Replace(url, "${POOL_ID}", poolId, 1))
 	if err != nil {
 		return nil, err
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-	jsonObj := make(map[string]interface{})
-	err = json.Unmarshal(body, &jsonObj)
-	if err != nil {
-		log.Printf("parse response error: %v\n", string(body))
-		return nil, err
-	}
-	data, ok := jsonObj["pools"].([]interface{})
-	if !ok {
-		log.Printf("no pools: %v\n", string(body))
-		return nil, err
-	}
-	return data, nil
+	return io.ReadAll(resp.Body)
 }
 
-func parseJSON(msg []interface{}) (map[string]internal_types.PriceBySymbol, error) {
-	prices := make(map[string]internal_types.PriceBySymbol)
-	now := time.Now()
-
-	osmoPrice := 0.0
-	osmoPair := "OSMO/USDC"
-
-	for _, value := range msg {
-		item := value.(map[string]interface{})
-		poolId := item["id"].(string)
-		symbol, ok := idToSymbols[poolId]
-		if !ok {
-			continue
-		}
-		base, quote, err := parser.ParseSymbol("osmosis", symbol)
-		if err != nil {
-			log.Printf("%v", err)
-			continue
-		}
-		assets, ok := item["pool_assets"].([]interface{})
-		if !ok || len(assets) != 2 {
-			log.Printf("invalid pool_assets: %v\n", item)
-			continue
-		}
-		first := assets[0].(map[string]interface{})["token"].(map[string]interface{})
-		firstAmount, err := strconv.ParseUint(first["amount"].(string), 10, 64)
-		if err != nil {
-			continue
-		}
-		second := assets[1].(map[string]interface{})["token"].(map[string]interface{})
-		// secondDenom := second["denom"].(string)
-		secondAmount, err := strconv.ParseUint(second["amount"].(string), 10, 64)
-		if err != nil {
-			continue
-		}
-		price := 0.0
-		// log.Printf("secondDenom: %s base: %s %v quote: %s %v\n", secondDenom, base, firstAmount, quote, secondAmount)
-		if firstAmount > 0 && secondAmount > 0 {
-			// if secondDenom == "uosmo" {
-			if symbol == osmoPair {
-				price = float64(firstAmount) / float64(secondAmount)
-			} else {
-				price = float64(secondAmount) / float64(firstAmount)
-			}
-		}
-		if symbol == osmoPair {
-			osmoPrice = price
-		}
-		prices[symbol] = internal_types.PriceBySymbol{
-			Exchange:  "osmosis",
-			Symbol:    symbol,
-			Base:      base,
-			Quote:     quote,
-			Price:     price,
-			Timestamp: uint64(now.UnixMilli()),
+func rotateUrl() (string, error) {
+	for i := range endpoints {
+		if !endpoints[i].used {
+			endpoints[i].used = true
+			return endpoints[i].url, nil
 		}
 	}
-	if osmoPrice == 0 {
-		return nil, fmt.Errorf("no osmo price")
+	for i := range endpoints {
+		endpoints[i].used = false
 	}
-	for _, pairPrice := range prices {
-		if pairPrice.Symbol != osmoPair {
-			pairPrice.Price = pairPrice.Price * osmoPrice
-			prices[pairPrice.Symbol] = pairPrice
-		}
-	}
-	return prices, nil
+	endpoints[0].used = true
+	return endpoints[0].url, nil
 }
