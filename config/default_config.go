@@ -4,7 +4,7 @@ var DefaultPriceServerConfig = Config{
 	Port:             8532,
 	MetricsPort:      8533,
 	Sentry:           "",
-	ProviderPriority: []string{ /*"astroport", "binance", "huobi", "kucoin", "bitfinex", "kraken", "okx", */ "coingecko", "osmosis", "bitstamp" /* "bybit" "bittrex", "exchangerate", "frankfurter", "fer"*/},
+	ProviderPriority: []string{"astroport", "binance", "huobi", "kucoin", "bitfinex", "kraken", "okx", "coingecko", "osmosis", "bitstamp", "bybit" /*"bittrex",*/, "exchangerate", "frankfurter", "fer"},
 	Providers: map[string]ProviderConfig{
 		"astroport": {
 			Interval: 30,
