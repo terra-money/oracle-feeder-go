@@ -1213,6 +1213,7 @@ var DefaultPriceServerConfig = Config{
 				"stargaze",
 				"akash-network",
 				"white-whale",
+				"eris-amplified-whale",
 				"switcheo",
 				"stride-staked-luna",
 			},
