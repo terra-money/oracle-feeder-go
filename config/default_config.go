@@ -1209,6 +1209,7 @@ var DefaultPriceServerConfig = Config{
 				"injective-protocol",
 				"secret",
 				"juno-network",
+				"eris-amplified-whale",
 				"stargaze",
 				"akash-network",
 				"white-whale",
