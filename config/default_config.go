@@ -1216,6 +1216,7 @@ var DefaultPriceServerConfig = Config{
 				"switcheo",
 				"stafi-staked-swth",
 				"stride-staked-luna",
+				"backbone-labs-staked-whale",
 			},
 		},
 		"osmosis": {
