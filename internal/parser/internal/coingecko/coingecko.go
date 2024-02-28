@@ -29,6 +29,7 @@ var COIN_GECKO_MAPPING = map[string]string{
 	"white-whale":          "WHALE",  // White Whale chain
 	"switcheo":             "SWTH",   // Carbon chain
 	"stride-staked-luna":   "STLUNA", // Stride chain
+	"stafi-staked-swth":    "rSWTH",  // stafi-staked-swth
 	"osmosis":              "OSMO",
 }
 
