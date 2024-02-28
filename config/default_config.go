@@ -1214,6 +1214,7 @@ var DefaultPriceServerConfig = Config{
 				"switcheo",
 				"stafi-staked-swth",
 				"stride-staked-luna",
+				"lion-dao",
 			},
 		},
 		"osmosis": {
