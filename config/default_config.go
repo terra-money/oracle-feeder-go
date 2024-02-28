@@ -1213,9 +1213,11 @@ var DefaultPriceServerConfig = Config{
 				"stargaze",
 				"akash-network",
 				"white-whale",
+				"eris-amplified-whale",
 				"switcheo",
 				"stafi-staked-swth",
 				"stride-staked-luna",
+				"backbone-labs-staked-whale",
 			},
 		},
 		"osmosis": {
