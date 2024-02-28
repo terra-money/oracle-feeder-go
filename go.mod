@@ -5,6 +5,7 @@ go 1.20
 require (
 	github.com/CosmWasm/wasmd v0.41.0
 	github.com/cosmos/cosmos-sdk v0.47.5
+	github.com/gin-contrib/cors v1.4.0
 	github.com/gin-gonic/gin v1.9.0
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gorilla/websocket v1.5.0

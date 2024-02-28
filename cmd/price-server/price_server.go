@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"github.com/terra-money/oracle-feeder-go/config"
@@ -16,7 +17,7 @@ import (
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Print("Error loading .env file:", err)
+		log.Print("Error loading .env file: ", err)
 	}
 	ctx := context.Background()
 
@@ -25,6 +26,13 @@ func main() {
 	allianceProvider := alliance_provider.NewAllianceProvider(&config.AllianceDefaultConfig, manager)
 
 	r := gin.Default()
+	r.Use(cors.New(cors.Config{
+		AllowOrigins:  []string{"*"},
+		AllowMethods:  []string{"GET", "OPTIONS"},
+		AllowHeaders:  []string{"Origin"},
+		ExposeHeaders: []string{"Content-Length"},
+	}))
+
 	r.GET("/health", func(c *gin.Context) {
 		c.String(http.StatusOK, "OK")
 	})
@@ -34,7 +42,7 @@ func main() {
 	})
 	r.GET("/alliance/protocol", func(c *gin.Context) {
 		allianceProtocolRes, err := allianceProvider.GetProtocolsInfo(ctx)
-		// allianceProtocolRes.UpdateChainsInfo.ChainsInfo.ProtocolsInfo[0].ChainId = "narwhal-1"
+		allianceProtocolRes.UpdateChainsInfo.ChainsInfo.ProtocolsInfo[0].ChainId = "narwhal-1"
 		// allianceProtocolRes.UpdateChainsInfo.ChainsInfo.ProtocolsInfo[1].ChainId = "harpoon-4"
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, err)

@@ -6,7 +6,7 @@ var KUJIRA_GRPC = "kujira-grpc.polkachu.com:11890"
 var CARBON_GRPC = "carbon-grpc.polkachu.com:19690"
 
 var AllianceDefaultConfig = AllianceConfig{
-	GRPCUrls: []string{MIGALOO_GRPC, KUJIRA_GRPC, CARBON_GRPC},
+	GRPCUrls: []string{MIGALOO_GRPC, KUJIRA_GRPC},
 	LSTSData: []LSTData{
 		// Whale
 		{ // Eris Protocol ampLUNA https://chainsco.pe/terra2/address/terra1ecgazyd0waaj3g7l9cmy5gulhxkps2gmxu9ghducvuypjq68mq2s5lvsct
@@ -49,5 +49,8 @@ var AllianceDefaultConfig = AllianceConfig{
 				IBCDenom: "ibc/0E90026619DD296AD4EF9546396F292B465BAB6B5BE00ABD6162AA1CE8E68098",
 			},
 		},
+	},
+	VTAllianceHubMap: map[string]string{
+		"factory/migaloo190qz7q5fu4079svf890h4h3f8u46ty6cxnlt78eh486k9qm995hquuv9kd/ualliance": "migaloo190qz7q5fu4079svf890h4h3f8u46ty6cxnlt78eh486k9qm995hquuv9kd",
 	},
 }
