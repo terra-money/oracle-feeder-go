@@ -27,6 +27,7 @@ var COIN_GECKO_MAPPING = map[string]string{
 	"juno-network":               "JUNO",
 	"stargaze":                   "STARS",
 	"akash-network":              "AKT",
+	"lion-dao":                   "ROAR",   // Lion DAO's token
 	"white-whale":                "WHALE",  // White Whale chain
 	"switcheo":                   "SWTH",   // Carbon chain
 	"stride-staked-luna":         "STLUNA", // Stride chain

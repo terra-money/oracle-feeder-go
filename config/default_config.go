@@ -1218,6 +1218,7 @@ var DefaultPriceServerConfig = Config{
 				"stafi-staked-swth",
 				"stride-staked-luna",
 				"backbone-labs-staked-whale",
+				"lion-dao",
 			},
 		},
 		"osmosis": {
