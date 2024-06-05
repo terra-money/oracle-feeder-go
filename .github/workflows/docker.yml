@@ -12,10 +12,10 @@ on:
       - develop
 
     tags:
-      - 'v*'
+      - "v*"
 
 env:
-  TERRAFORM_REPO: 'terra-money/tf-terra-oracle'
+  TERRAFORM_REPO: "terra-money/tf-terra-oracle"
 
 jobs:
   refs-parsing:
@@ -150,7 +150,7 @@ jobs:
             exit 1
           fi
       - name: Invoke Terraform Workflow
-        uses: aurelien-baudet/workflow-dispatch@v2
+        uses: the-actions-org/workflow-dispatch@v2.1.1
         with:
           repo: ${{ env.TERRAFORM_REPO }}
           ref: ${{ env.TF_GITHUB_REF }}
