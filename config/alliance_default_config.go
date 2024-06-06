@@ -50,4 +50,7 @@ var AllianceDefaultConfig = AllianceConfig{
 			},
 		},
 	},
+	VTAllianceHubMap: map[string]string{
+		"factory/migaloo190qz7q5fu4079svf890h4h3f8u46ty6cxnlt78eh486k9qm995hquuv9kd/ualliance": "migaloo190qz7q5fu4079svf890h4h3f8u46ty6cxnlt78eh486k9qm995hquuv9kd",
+	},
 }

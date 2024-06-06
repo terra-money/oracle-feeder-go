@@ -19,9 +19,10 @@ type ProviderConfig struct {
 }
 
 type AllianceConfig struct {
-	GRPCUrls     []string       `json:"lcdList,omitempty"`
-	LSTSData     []LSTData      `json:"lstData,omitempty"`
-	LSTOnPhoenix []LSTOnPhoenix `json:"lstOnPhoenix,omitempty"`
+	GRPCUrls         []string          `json:"lcdList,omitempty"`
+	LSTSData         []LSTData         `json:"lstData,omitempty"`
+	LSTOnPhoenix     []LSTOnPhoenix    `json:"lstOnPhoenix,omitempty"`
+	VTAllianceHubMap map[string]string `json:"vtAllianceHubMap,omitempty"`
 }
 
 type LSTData struct {
